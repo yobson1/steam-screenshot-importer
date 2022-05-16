@@ -5,24 +5,34 @@
 	export let open = false;
 	export let width = 96;
 
+	// https://www.npmjs.com/package/svelte-simple-modal
 	let buttons = [
+		{
+			name: "Home",
+			href: "/",
+			src: "home.svg",
+			rotate: false,
+		},
 		{
 			// TODO: Have a text entry pop up to enter a custom appid to upload for
 			name: "App ID",
 			href: "/",
 			src: "plus-circle.svg",
+			rotate: true,
 		},
 		{
 			// TODO: Have a modal popup with about info
 			name: "About",
 			href: "/",
 			src: "info.svg",
+			rotate: true,
 		},
 		{
 			// TODO: Route to the options page
 			name: "Options",
-			href: "/",
+			href: "/settings",
 			src: "settings.svg",
+			rotate: true,
 		},
 	];
 </script>
@@ -42,6 +52,7 @@
 					name={button.name}
 					src={button.src}
 					href={button.href}
+					rotate={button.rotate}
 				/>
 			</p>
 		{/each}

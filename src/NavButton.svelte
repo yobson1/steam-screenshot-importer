@@ -1,10 +1,12 @@
 <script>
-	export let name, href, src;
+	export let name, href, src, rotate;
 </script>
 
 <a {href}>
 	<button>
-		<span class="img-container"><img {src} alt={name} /></span>
+		<span class="img-container">
+			<img class={rotate ? "rotate" : ""} {src} alt={name} />
+		</span>
 		<span>{name}</span>
 	</button>
 </a>
@@ -40,7 +42,7 @@
 		filter: brightness(0.8);
 	}
 
-	button:hover img {
+	button:hover img.rotate {
 		transform: rotate(360deg);
 	}
 
