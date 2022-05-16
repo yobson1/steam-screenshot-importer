@@ -9,6 +9,13 @@
 		<!-- TODO: Add light mode support -->
 
 		<ImgLink
+			href="https://buymeacoffee.com/yobson"
+			src="bmc-logo.svg"
+			alt="buymeacoffee"
+			size="32"
+		/>
+
+		<ImgLink
 			href="https://github.com/yobson1"
 			src={$darkModeEnabled
 				? "GitHub-Mark-Light-32px.png"
