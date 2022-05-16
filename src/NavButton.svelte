@@ -2,7 +2,12 @@
 	export let name, href, src;
 </script>
 
-<a {href}><button><img {src} alt={name} /><span>{name}</span></button></a>
+<a {href}>
+	<button>
+		<span class="img-container"><img {src} alt={name} /></span>
+		<span>{name}</span>
+	</button>
+</a>
 
 <style>
 	button {
@@ -37,6 +42,14 @@
 
 	button:hover img {
 		transform: rotate(360deg);
+	}
+
+	.img-container {
+		transition: transform 100ms ease;
+	}
+
+	button:active .img-container {
+		transform: scale(0.85);
 	}
 
 	:global(body.dark-mode) img {
