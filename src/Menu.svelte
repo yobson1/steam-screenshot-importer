@@ -2,7 +2,7 @@
 	import { fly } from "svelte/transition";
 	import NavButton from "./NavButton.svelte";
 
-	export let open = true;
+	export let open = false;
 	export let width = 96;
 
 	let buttons = [
@@ -31,7 +31,7 @@
 	class="menu"
 	style="left: {open
 		? 'calc(-1 * var(--body-padding))'
-		: 'calc(-' + width + 'px - 2rem)'};
+		: 'calc(-' + width + 'px - 2.5rem)'};
 		width: {width}px;
 		box-shadow: {open ? '0 0 4px 5px rgba(0, 0, 0, 0.4)' : 'none'};"
 >
@@ -58,7 +58,7 @@
 		letter-spacing: 0.15rem;
 		height: 100vh;
 		position: absolute;
-		background-color: rgb(255, 255, 255);
+		background-color: #eee;
 		color: var(--content-light);
 		transition: none 525ms ease-in-out;
 		transition-property: box-shadow, left;
