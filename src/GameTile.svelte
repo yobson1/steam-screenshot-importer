@@ -77,7 +77,7 @@
 </script>
 
 <div bind:this={tile}>
-	<img bind:this={img} src={imgSrc} alt={appID} />
+	<img bind:this={img} src={imgSrc} alt={appName} />
 	<span class="no-img-title">{appName}</span>
 </div>
 
