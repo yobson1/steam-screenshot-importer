@@ -1,12 +1,28 @@
 <script>
+	import { onMount } from "svelte";
+	import confetti from "canvas-confetti";
+
 	let btn;
 
-	// TODO: Use pixi.js
-	// https://www.npmjs.com/package/pixi.js
-	// https://www.npmjs.com/package/@types/pixi.js
-	// To make a floating heart animation when the button is clicked
+	onMount(() => {
+		btn.onclick = (event) => {
+			confetti({
+				origin: {
+					x: event.clientX / window.visualViewport.width,
+					y: event.clientY / window.visualViewport.height,
+				},
+				angle: 130,
+				ticks: 300,
+				particleCount: 100,
+				disableForReducedMotion: true,
+			});
+		};
+	});
 
-	export let href, src, alt, size;
+	export let href,
+		src,
+		alt,
+		size = null;
 </script>
 
 <a draggable="false" {href} target="_blank" bind:this={btn}>
