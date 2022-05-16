@@ -91,7 +91,7 @@
 		user-select: none;
 		width: 210px;
 		height: 315px;
-		padding: 0.2rem;
+		padding: 0.8rem;
 		cursor: pointer;
 	}
 
@@ -111,11 +111,19 @@
 		color: #b9c2cc;
 	}
 
+	div:hover img {
+		filter: none;
+	}
+
 	img {
 		width: 210px;
 		height: 315px;
-		border: 0px;
 		user-select: none;
 		pointer-events: none;
+		transition: filter 0.8s;
+		-webkit-filter: drop-shadow(0 5px 10px black);
+		filter: drop-shadow(0 5px 10px black);
+		-webkit-transform: translateZ(0);
+		transform: translateZ(0);
 	}
 </style>
