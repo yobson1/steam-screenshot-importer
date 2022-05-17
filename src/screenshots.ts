@@ -3,7 +3,7 @@ import { open } from "@tauri-apps/api/dialog";
 import { pictureDir } from "@tauri-apps/api/path";
 import swal from "sweetalert";
 
-function sendScreenshots(paths: string[], appID: number) {
+function sendScreenshots(paths: string[] | string, appID: number) {
 	return invoke("import_screenshots", { filePaths: paths, appId: appID });
 }
 
@@ -34,18 +34,26 @@ function importScreenshots(appID: number) {
 			],
 			multiple: true,
 			title: "Select screenshots to import",
-		}).then((files: string[]) => {
-			sendScreenshots(files, appID).then((err: string) => {
-				if (err) {
-					swal({
-						title: "Error",
-						text: err,
-						icon: "error",
-					});
+		}).then((files) => {
+			if (files !== null && files.length > 0) {
+				sendScreenshots(files, appID).then((err: string) => {
+					if (err) {
+						swal({
+							title: "Error",
+							text: err,
+							icon: "error",
+						});
 
-					console.error(err);
-				}
-			});
+						console.error(err);
+					}
+				});
+			} else {
+				swal({
+					title: "Error",
+					text: "No files selected",
+					icon: "error",
+				});
+			}
 		});
 	});
 }
