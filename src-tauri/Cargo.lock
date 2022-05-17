@@ -317,19 +317,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 
 [[package]]
-name = "chrono"
-version = "0.4.19"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "670ad68c9088c2a963aaa298cb369688cf3f9465ce5e2d4ca10e6e0098a1ce73"
-dependencies = [
- "libc",
- "num-integer",
- "num-traits",
- "time 0.1.43",
- "winapi",
-]
-
-[[package]]
 name = "cocoa"
 version = "0.24.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1641,7 +1628,7 @@ dependencies = [
  "dirs-next",
  "objc-foundation",
  "objc_id",
- "time 0.3.9",
+ "time",
 ]
 
 [[package]]
@@ -2889,7 +2876,7 @@ dependencies = [
  "atty",
  "colored",
  "log",
- "time 0.3.9",
+ "time",
  "winapi",
 ]
 
@@ -2968,7 +2955,6 @@ name = "steam-screenshot-importer"
 version = "0.1.0"
 dependencies = [
  "base64",
- "chrono",
  "directories",
  "image",
  "log",
@@ -2980,7 +2966,6 @@ dependencies = [
  "steamy-vdf",
  "tauri",
  "tauri-build",
- "vdf-serde",
 ]
 
 [[package]]
@@ -3431,16 +3416,6 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.1.43"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca8a50ef2360fbd1eeb0ecd46795a87a19024eb4b53c5dc916ca1fd95fe62438"
-dependencies = [
- "libc",
- "winapi",
-]
-
-[[package]]
-name = "time"
 version = "0.3.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2702e08a7a860f005826c6815dcac101b19b5eb330c27fe4a5928fec1d20ddd"
@@ -3649,17 +3624,6 @@ name = "vcpkg"
 version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "accd4ea62f7bb7a82fe23066fb0957d48ef677f6eeb8215f372f52e48bb32426"
-
-[[package]]
-name = "vdf-serde"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b7ef3f8488e60e4ac2bf9de254e541061de742d598dddfc2be77e7bcf8c56dbb"
-dependencies = [
- "nom",
- "serde",
- "steamy-vdf",
-]
 
 [[package]]
 name = "version-compare"

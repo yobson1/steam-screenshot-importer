@@ -3,21 +3,22 @@
     windows_subsystem = "windows"
 )]
 
-use chrono::Local;
 use directories::ProjectDirs;
 use image::imageops::{resize, FilterType};
 use image::io::Reader as ImageReader;
 use image::ImageOutputFormat;
-use log::{error, info};
-use serde::{Deserialize, Serialize};
+use log::{info, warn};
 use simple_logger::SimpleLogger;
 use std::collections::HashMap;
-use std::fs::{create_dir_all, read, File};
+use std::ffi::CString;
+use std::fs::{create_dir_all, read, remove_dir_all, File};
 use std::io::BufWriter;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use steamlocate::{SteamApp, SteamDir};
-use steamworks::{Client, FileType};
+use steamworks::sys::SteamAPI_ISteamScreenshots_AddScreenshotToLibrary as AddScreenshotToLibrary;
+use steamworks::sys::SteamAPI_SteamScreenshots_v003 as GetISteamScreenshots;
+use steamworks::Client;
 use steamy_vdf as vdf;
 
 const LIB_CACHE_PATH: &str = "appcache\\librarycache\\";
@@ -79,25 +80,7 @@ fn get_recent_steam_user() -> String {
     return steam_user.to_string();
 }
 
-const PREVIEW_WIDTH: u32 = 200;
-
-#[derive(Serialize, Deserialize, Debug)]
-struct ScreenshotVDFEntry {
-    #[serde(rename = "type")]
-    screen_type: u8,
-    filename: String,
-    thumbnail: String,
-    vrfilename: String,
-    imported: bool,
-    width: u32,
-    height: u32,
-    gameid: u32,
-    creation: i64,
-    caption: String,
-    #[serde(rename = "Permissions")]
-    permissions: String,
-    hscreenshot: String,
-}
+const PREVIEW_WIDTH: u32 = steamworks::sys::k_ScreenshotThumbWidth as u32;
 
 #[tauri::command]
 fn import_screenshots(file_paths: Vec<String>, app_id: u32) {
@@ -110,58 +93,28 @@ fn import_screenshots(file_paths: Vec<String>, app_id: u32) {
         app_id
     );
 
-    // Look through file_paths
-    if file_paths.len() > 0 {
+    let num_of_files = file_paths.len();
+    if num_of_files > 0 {
         let project_dirs = ProjectDirs::from("com", "yob", "ssi").unwrap();
         let cache_dir = project_dirs.cache_dir();
         create_dir_all(&cache_dir).unwrap();
 
-        // Initialize steamworks
+        // Initialize steamworks - we don't actually need to use the client object since
+        // it doesn't formally implement the ISteamScreenshots interface and we're using
+        // the raw bindings for that later.
         // TODO: Handle errors, usually will be from steam not being open InitFailed error
-        let (client, single) = Client::init_app(app_id).unwrap();
-        let user_id = client.user().steam_id().account_id();
+        // Also need to test what happens if attempted on an app_id the user doesn't own
+        let (_client, single) = Client::init_app(app_id).unwrap();
 
-        info!("Steam user ID: {}", user_id.raw());
-
-        // Get the app's screenshot directory
-        // Using steamlocate, the user ID & app ID
-        let steamdir: SteamDir = SteamDir::locate().unwrap();
-        let steam_path: PathBuf = steamdir.path;
-        let screenshots_root: PathBuf = steam_path
-            .join("userdata")
-            .join(format!("{}", user_id.raw()));
-        let screenshots_path = screenshots_root
-            .join("760")
-            .join("remote")
-            .join(&app_id.to_string())
-            .join("screenshots");
-        let thumbnails_path = screenshots_path.join("thumbnails");
-        let vdf_path = screenshots_root.join("screenshots.vdf");
-
-        info!("Screenshots path: {}", screenshots_path.display());
-        info!("Thumbnails path: {}", thumbnails_path.display());
-
-        create_dir_all(&thumbnails_path).unwrap();
-
-        // Get the name the image will be saved in using the current date & time
-        let date = Local::now();
-        let new_file_name = date.format("%Y%m%d%H%M%S_");
-
-        let mut i = 0;
         for file_path in file_paths {
-            i += 1;
-            let new_file_name = new_file_name.to_string() + &i.to_string() + ".jpg";
-
-            info!("New file name: {}", new_file_name);
-
-            let client = client.clone();
-            let ugc = client.ugc();
-            let utils = client.utils();
-
-            // Create downscaled preview image
             let img_path = Path::new(&file_path);
             let img_name = img_path.file_stem().unwrap().to_str().unwrap();
             let extension = img_path.extension().unwrap().to_str().unwrap();
+
+            let new_file_name = format!("{}_{}.jpg", img_name, app_id);
+            let new_thumbnail_name = format!("{}_{}_thumb.jpg", img_name, app_id);
+
+            info!("New file name: {}", new_file_name);
 
             // Load original image
             info!("Loading image: {}", img_path.display());
@@ -170,24 +123,11 @@ fn import_screenshots(file_paths: Vec<String>, app_id: u32) {
                 .decode()
                 .unwrap();
 
-            // Create preview image
-            info!("Resizing image {}.{} for thumbnail", img_name, extension);
-
-            let preview_height = (PREVIEW_WIDTH * img.height()) / img.width();
-            // let preview_img = img.thumbnail(PREVIEW_WIDTH, preview_height);
-            let preview_img = resize(&img, PREVIEW_WIDTH, preview_height, FilterType::Lanczos3);
-            let preview_img_path = thumbnails_path.join(&new_file_name);
-            let file = File::create(&preview_img_path).unwrap();
-            let mut writer = BufWriter::new(&file);
-            preview_img
-                .write_to(&mut writer, ImageOutputFormat::Jpeg(95))
-                .unwrap();
-
             // Convert to jpg if needed
             // TODO: Check these
             // steamMaxSideSize = 16000;
             // steamMaxResolution = 26210175;
-            let new_img_path = screenshots_path.join(&new_file_name);
+            let new_img_path = cache_dir.join(&new_file_name);
 
             if extension != "jpg" && extension != "jpeg" {
                 info!("Converting image {}.{} to jpg", img_name, extension);
@@ -197,91 +137,59 @@ fn import_screenshots(file_paths: Vec<String>, app_id: u32) {
                     .unwrap(); // TODO: Make the quality configurable
             } else {
                 info!("Copying image {}.{}", img_name, extension);
-                let file = File::create(&new_img_path).unwrap();
-                let mut writer = BufWriter::new(file);
-                img.write_to(&mut writer, ImageOutputFormat::Jpeg(95))
-                    .unwrap();
+                img.save(&new_img_path).unwrap();
             }
 
-            // Prepare VDF data
-            let entry = ScreenshotVDFEntry {
-                screen_type: 1,
-                filename: app_id.to_string() + "/screenshots/" + &new_file_name,
-                thumbnail: app_id.to_string() + "/screenshots/thumbnails" + &new_file_name,
-                vrfilename: "".to_string(),
-                imported: false,
-                width: img.width(),
-                height: img.height(),
-                gameid: app_id,
-                creation: date.timestamp(),
-                caption: "".to_string(),
-                permissions: "".to_string(),
-                hscreenshot: "".to_string(),
-            };
-            let vdf_string = vdf_serde::to_string(&entry).unwrap();
+            // Create thumbnail image
+            info!("Resizing image {}.{} for thumbnail", img_name, extension);
 
-            info!("VDF Data:\n{}", vdf_string);
+            let preview_img_path = cache_dir.join(&new_thumbnail_name);
 
-            // Upload screenshot
-            let app_id = utils.app_id();
+            let preview_height = (PREVIEW_WIDTH * img.height()) / img.width();
+            let preview_img = resize(&img, PREVIEW_WIDTH, preview_height, FilterType::Lanczos3);
+            let file = File::create(&preview_img_path).unwrap();
+            let mut writer = BufWriter::new(&file);
+            preview_img
+                .write_to(&mut writer, ImageOutputFormat::Jpeg(95))
+                .unwrap();
 
-            ugc.create_item(app_id, FileType::Screenshot, move |result| {
-                let ugc = client.ugc();
-
-                let (file_id, _bool) = match result {
-                    Ok(item) => item,
-                    Err(err) => {
-                        error!("{}", err);
-                        return;
-                    }
-                };
-
-                info!("Created UGC with ID {}", file_id.0);
-
-                info!(
-                    "Uploading image {} {}",
-                    new_img_path.to_str().unwrap(),
-                    preview_img_path.to_str().unwrap()
+            // Import screenshot
+            info!(
+                "Importing screenshot {} {}",
+                new_img_path.display(),
+                preview_img_path.display()
+            );
+            unsafe {
+                let screenshots = GetISteamScreenshots();
+                let screenshot_path = CString::new(&*new_img_path.to_string_lossy()).unwrap();
+                let thumbnail_path = CString::new(&*preview_img_path.to_string_lossy()).unwrap();
+                AddScreenshotToLibrary(
+                    screenshots,
+                    screenshot_path.as_ptr(),
+                    thumbnail_path.as_ptr(),
+                    img.width().try_into().unwrap(),
+                    img.height().try_into().unwrap(),
                 );
-
-                // FIXME: Hangs after this
-                // Might be better to just use `explorer steam://open/screenshots/<appid>` with std::process::Command
-                let update_watch = ugc
-                    .start_item_update(app_id, file_id)
-                    // .title("Screenshot")
-                    // .description("Image imported using yobson's SSI tool")
-                    // .preview_path(&preview_img_path)
-                    .content_path(&new_img_path)
-                    .submit(None, |result| {
-                        info!("Submit callback");
-
-                        let (file_id, _bool) = match result {
-                            Ok(item) => item,
-                            Err(err) => {
-                                error!("{}", err);
-                                return;
-                            }
-                        };
-
-                        info!("Uploaded image {}", file_id.0);
-                    });
-
-                let (status, progress, total) = update_watch.progress();
-                info!(
-                    "{:#?} {}%({}/{})",
-                    status,
-                    progress / total,
-                    progress,
-                    total
-                );
-            });
+                single.run_callbacks();
+                info!("Import of {}.{} complete", img_name, extension);
+            }
         }
 
-        loop {
-            info!("Running callbacks");
-            single.run_callbacks();
-            std::thread::sleep(std::time::Duration::from_millis(100));
-        }
+        info!(
+            "Import of {} images complete, opening steam screenshots window",
+            num_of_files
+        );
+
+        // Open the steam screenshots window for upload
+        Command::new("explorer")
+            .arg(format!("steam://open/screenshots/{}", app_id))
+            .spawn()
+            .unwrap();
+
+        // Empty the cache
+        remove_dir_all(&cache_dir).unwrap();
+    } else {
+        warn!("Got no screenshots to import");
     }
 }
 
