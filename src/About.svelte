@@ -4,7 +4,7 @@
 		A Tauri app written with Rust & Svelte using the Steamworks API to
 		import any image as a screenshot for any game you own.
 	</p>
-	<p>
+	<p class="github-link">
 		Please report bugs and submit feature requests on the
 		<a
 			href="https://github.com/yobson1/steam-screenshot-importer/issues"
@@ -61,5 +61,19 @@
 
 	div {
 		padding-inline: 3rem;
+	}
+
+	p {
+		pointer-events: none;
+	}
+
+	a {
+		pointer-events: all;
+	}
+
+	.github-link::after {
+		display: block;
+		content: "and maybe leave a star? 😳👉💖";
+		font-size: 12px;
 	}
 </style>
