@@ -30,16 +30,18 @@
 						},
 					},
 				}).then((appID: string) => {
-					let appIDInt = parseInt(appID);
+					if (appID != null) {
+						let appIDInt = parseInt(appID);
 
-					if (isNaN(appIDInt)) {
-						swal({
-							title: "Invalid App ID",
-							text: "Please enter a valid app ID",
-							icon: "error",
-						});
-					} else {
-						importScreenshots(appIDInt);
+						if (isNaN(appIDInt)) {
+							swal({
+								title: "Invalid App ID",
+								text: "Please enter a valid app ID",
+								icon: "error",
+							});
+						} else {
+							importScreenshots(appIDInt);
+						}
 					}
 				});
 			},
