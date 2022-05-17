@@ -3,9 +3,28 @@
 	import NavButton from "./NavButton.svelte";
 	import swal from "sweetalert";
 	import { importScreenshots } from "./screenshots.js";
+	import { onMount } from "svelte";
 
 	export let open = false;
 	export let width = 96;
+
+	let menu;
+	onMount(() => {
+		document.body.onclick = (event) => {
+			let path = event.composedPath();
+			if (
+				!path.includes(menu) &&
+				!path.includes(
+					document.getElementsByClassName("hamburger")[0]
+				) &&
+				!path.includes(
+					document.getElementsByClassName("swal-overlay")[0]
+				)
+			) {
+				open = false;
+			}
+		};
+	});
 
 	// https://www.npmjs.com/package/svelte-simple-modal
 	let buttons = [
@@ -63,6 +82,7 @@
 </script>
 
 <div
+	bind:this={menu}
 	class="menu"
 	style="left: {open
 		? 'calc(-1 * var(--body-padding))'
