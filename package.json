@@ -22,7 +22,7 @@
     "rollup-plugin-terser": "^7.0.0",
     "svelte": "^3.0.0",
     "svelte-check": "^2.0.0",
-    "svelte-preprocess": "^4.0.0",
+    "svelte-preprocess": "^4.10.6",
     "tinro": "^0.6.12",
     "tslib": "^2.0.0",
     "typescript": "^4.0.0"
@@ -33,7 +33,6 @@
     "canvas-confetti": "^1.5.1",
     "sirv-cli": "^2.0.0",
     "svelte-hamburgers": "^4.0.1",
-    "svelte-preprocess": "^4.10.6",
     "sweetalert": "^2.1.2",
     "typescript": "^4.6.4",
     "vanilla-tilt": "^1.7.2"

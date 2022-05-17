@@ -8,14 +8,11 @@
   },
   "package": {
     "productName": "Steam Screenshot Importer",
-    "version": "0.1.0"
+    "version": "0.1.1"
   },
   "tauri": {
     "allowlist": {
-      "all": true,
-      "fs": {
-        "all": true
-      }
+      "all": true
     },
     "bundle": {
       "active": true,
@@ -41,9 +38,11 @@
         "providerShortName": null,
         "signingIdentity": null
       },
-      "resources": [],
-      "shortDescription": "",
-      "targets": "all",
+      "resources": [
+		  "./steam_api64.dll"
+	  ],
+      "shortDescription": "Automates importing images to steam screenshots",
+      "targets": "msi",
       "windows": {
         "certificateThumbprint": null,
         "digestAlgorithm": "sha256",
@@ -54,7 +53,10 @@
       "csp": null
     },
     "updater": {
-      "active": false
+      "active": true,
+	  "endpoints": [],
+	  "dialog": true,
+	  "pubkey": "~/.taru/ssi.key.pub"
     },
     "windows": [
       {
