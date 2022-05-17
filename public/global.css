@@ -126,6 +126,15 @@ body.dark-mode .swal-title {
 	background-color: #ff5117 !important;
 }
 
+.swal-button--cancel {
+	background-color: #ff0000;
+	color: white;
+}
+
+.swal-button--cancel:hover {
+	background-color: #fa3131 !important;
+}
+
 body.dark-mode input {
 	border-color: grey;
 	background-color: #333;

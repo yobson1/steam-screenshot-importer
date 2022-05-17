@@ -8,7 +8,7 @@
   },
   "package": {
     "productName": "Steam Screenshot Importer",
-    "version": "0.1.1"
+    "version": "0.1.2"
   },
   "tauri": {
     "allowlist": {
@@ -55,7 +55,7 @@
     "updater": {
       "active": true,
 	  "endpoints": ["https://raw.githubusercontent.com/yobson1/steam-screenshot-importer/master/update.json"],
-	  "dialog": true,
+	  "dialog": false,
 	  "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDk1NTRBMjg4NTQ5QjVGNzgKUldSNFg1dFVpS0pVbFlJdllvK0c3b1BlMFhmaHpxNmlhQm5CNVhaQzhjSUlxekNQTTRaaG1JNFYK"
     },
     "windows": [
