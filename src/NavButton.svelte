@@ -1,9 +1,20 @@
 <script>
-	export let name, href, src, rotate;
+	import { onMount } from "svelte";
+
+	export let name,
+		href,
+		src,
+		rotate,
+		onclick = () => {};
+
+	let btn;
+	onMount(() => {
+		btn.onclick = onclick;
+	});
 </script>
 
 <a {href}>
-	<button>
+	<button bind:this={btn}>
 		<span class="img-container">
 			<img class={rotate ? "rotate" : ""} {src} alt={name} />
 		</span>

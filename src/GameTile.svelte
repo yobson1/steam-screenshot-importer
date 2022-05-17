@@ -3,11 +3,8 @@
 	export let appID;
 	export let appName;
 	import { onMount } from "svelte";
-	import { open } from "@tauri-apps/api/dialog";
-	import { pictureDir } from "@tauri-apps/api/path";
 	import { importScreenshots } from "./screenshots.js";
 	import VanillaTilt from "vanilla-tilt";
-	import swal from "sweetalert";
 
 	let tile;
 	let img;
@@ -37,48 +34,7 @@
 		};
 
 		tile.onclick = () => {
-			pictureDir().then((dir) => {
-				// https://github.com/image-rs/image#supported-image-formats
-				open({
-					defaultPath: dir,
-					filters: [
-						{
-							name: "Images",
-							extensions: [
-								"png",
-								"jpg",
-								"jpeg",
-								"bmp",
-								"ico",
-								"tiff",
-								"tif",
-								"webp",
-								"avif",
-								"pnm",
-								"dds",
-								"tga",
-								"exr",
-							],
-						},
-					],
-					multiple: true,
-					title: "Select screenshots to import",
-				}).then((files) => {
-					importScreenshots(files, appID).then((err) => {
-						if (err) {
-							swal({
-								title: "Error",
-								text: err,
-								icon: "error",
-							});
-
-							console.error(err);
-						}
-
-						swal.close();
-					});
-				});
-			});
+			importScreenshots(appID);
 		};
 
 		img.onerror = () => {

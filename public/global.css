@@ -109,11 +109,17 @@ body.dark-mode .swal-title {
 	color: white;
 }
 
-body.dark-mode .swal-button {
+.swal-button {
 	background-color: #ff3e00;
 	color: white;
 }
 
-body.dark-mode .swal-button:hover {
-	background-color: #ff5117;
+.swal-button:hover {
+	background-color: #ff5117 !important;
+}
+
+body.dark-mode input {
+	border-color: grey;
+	background-color: #333;
+	color: white;
 }

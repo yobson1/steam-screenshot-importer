@@ -1,6 +1,8 @@
-<script>
+<script lang="ts">
 	import { fly } from "svelte/transition";
 	import NavButton from "./NavButton.svelte";
+	import swal from "sweetalert";
+	import { importScreenshots } from "./screenshots.js";
 
 	export let open = false;
 	export let width = 96;
@@ -14,11 +16,33 @@
 			rotate: false,
 		},
 		{
-			// TODO: Have a text entry pop up to enter a custom appid to upload for
 			name: "App ID",
 			href: "/",
 			src: "plus-circle.svg",
 			rotate: true,
+			onclick: () => {
+				swal({
+					title: "Custom App ID",
+					content: {
+						element: "input",
+						attributes: {
+							placeholder: "Enter custom app ID",
+						},
+					},
+				}).then((appID: string) => {
+					let appIDInt = parseInt(appID);
+
+					if (isNaN(appIDInt)) {
+						swal({
+							title: "Invalid App ID",
+							text: "Please enter a valid app ID",
+							icon: "error",
+						});
+					} else {
+						importScreenshots(appIDInt);
+					}
+				});
+			},
 		},
 		{
 			// TODO: Have a modal popup with about info
@@ -53,6 +77,7 @@
 					src={button.src}
 					href={button.href}
 					rotate={button.rotate}
+					onclick={button.onclick}
 				/>
 			</p>
 		{/each}
