@@ -1,4 +1,4 @@
 <script>
 </script>
 
-<h1>Settings</h1>
+<h1>Options</h1>

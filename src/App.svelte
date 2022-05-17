@@ -4,18 +4,13 @@
 	https://tauri.studio/v1/guides/distribution/updater/#update-file-json-format
 
 	Icon lib: https://feathericons.com/
-
-	Possible UI libraries:
-	https://carbon-components-svelte.onrender.com/
-	https://flowbite.com/
-	https://illright.github.io/attractions/
-	https://smeltejs.com/
  -->
 <script lang="ts">
 	import Header from "./Header.svelte";
 	import Footer from "./Footer.svelte";
 	import GameTile from "./GameTile.svelte";
 	import Settings from "./Settings.svelte";
+	import About from "./About.svelte";
 	import { Route } from "tinro";
 	import { invoke } from "@tauri-apps/api/tauri";
 
@@ -61,6 +56,14 @@
 	<main>
 		<content>
 			<Settings />
+		</content>
+	</main>
+</Route>
+
+<Route path="/about">
+	<main>
+		<content>
+			<About />
 		</content>
 	</main>
 </Route>

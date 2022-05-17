@@ -45,9 +45,8 @@
 			},
 		},
 		{
-			// TODO: Have a modal popup with about info
 			name: "About",
-			href: "/",
+			href: "/about",
 			src: "info.svg",
 			rotate: true,
 		},
