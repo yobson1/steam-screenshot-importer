@@ -1,8 +1,7 @@
 <!--
 	TODO:
-	https://tauri.studio/v1/guides/building/sidecar
-	https://tauri.studio/v1/guides/features/splashscreen/
-	https://tauri.studio/v1/guides/distribution/
+	https://tauri.studio/v1/guides/distribution/windows/
+	https://tauri.studio/v1/guides/distribution/updater/#update-file-json-format
 
 	Icon lib: https://feathericons.com/
 
@@ -16,6 +15,7 @@
 	import Header from "./Header.svelte";
 	import Footer from "./Footer.svelte";
 	import GameTile from "./GameTile.svelte";
+	import Settings from "./Settings.svelte";
 	import { Route } from "tinro";
 	import { invoke } from "@tauri-apps/api/tauri";
 
@@ -60,7 +60,7 @@
 <Route path="/settings">
 	<main>
 		<content>
-			<h1>Settings</h1>
+			<Settings />
 		</content>
 	</main>
 </Route>
@@ -90,14 +90,6 @@
 		flex-wrap: wrap;
 		flex-direction: row;
 		justify-content: center;
-	}
-
-	h1 {
-		color: #ff3e00;
-		text-transform: uppercase;
-		font-size: 4em;
-		font-weight: 100;
-		margin-top: 0;
 	}
 
 	@media (min-width: 640px) {

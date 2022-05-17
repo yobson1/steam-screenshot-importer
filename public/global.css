@@ -74,3 +74,46 @@ button:not(:disabled):active {
 button:focus {
 	border-color: #666;
 }
+
+h1 {
+	color: #ff3e00;
+	text-transform: uppercase;
+	font-size: 4em;
+	font-weight: 100;
+	margin-top: 0;
+}
+
+.swal-modal {
+	padding: 0;
+	border: 0;
+	border-radius: 15px;
+	background-color: var(--background-light);
+}
+
+.swal-text {
+	color: var(--content-light);
+	text-align: center;
+	font-weight: 400;
+	font-size: 16px;
+}
+
+body.dark-mode .swal-modal {
+	background-color: var(--background-dark);
+}
+
+body.dark-mode .swal-text {
+	color: var(--content-dark);
+}
+
+body.dark-mode .swal-title {
+	color: white;
+}
+
+body.dark-mode .swal-button {
+	background-color: #ff3e00;
+	color: white;
+}
+
+body.dark-mode .swal-button:hover {
+	background-color: #ff5117;
+}

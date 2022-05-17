@@ -34,6 +34,7 @@
     "sirv-cli": "^2.0.0",
     "svelte-hamburgers": "^4.0.1",
     "svelte-preprocess": "^4.10.6",
+    "sweetalert": "^2.1.2",
     "typescript": "^4.6.4",
     "vanilla-tilt": "^1.7.2"
   }

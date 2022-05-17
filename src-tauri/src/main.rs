@@ -7,7 +7,7 @@ use directories::ProjectDirs;
 use image::imageops::{resize, FilterType};
 use image::io::Reader as ImageReader;
 use image::ImageOutputFormat;
-use log::{info, warn};
+use log::{error, info, warn};
 use simple_logger::SimpleLogger;
 use std::collections::HashMap;
 use std::ffi::CString;
@@ -16,12 +16,49 @@ use std::io::BufWriter;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use steamlocate::{SteamApp, SteamDir};
+use steamworks::sys::EHTTPMethod;
+use steamworks::sys::SteamAPICall_t;
+use steamworks::sys::SteamAPI_ISteamHTTP_CreateHTTPRequest as steam_http_create;
+use steamworks::sys::SteamAPI_ISteamHTTP_GetHTTPDownloadProgressPct as http_get_download_progress;
+use steamworks::sys::SteamAPI_ISteamHTTP_GetHTTPResponseBodyData as http_get_response_body_data;
+use steamworks::sys::SteamAPI_ISteamHTTP_GetHTTPResponseBodySize as http_get_response_body_size;
+use steamworks::sys::SteamAPI_ISteamHTTP_ReleaseHTTPRequest as steam_http_release;
+use steamworks::sys::SteamAPI_ISteamHTTP_SendHTTPRequest as steam_http_send;
 use steamworks::sys::SteamAPI_ISteamScreenshots_AddScreenshotToLibrary as add_screenshot_to_library;
+use steamworks::sys::SteamAPI_SteamHTTP_v003 as get_steam_http;
 use steamworks::sys::SteamAPI_SteamScreenshots_v003 as get_steam_screenshots;
 use steamworks::Client;
 use steamy_vdf as vdf;
 
 const LIB_CACHE_PATH: &str = "appcache\\librarycache\\";
+
+unsafe fn steam_http_get(url: &str) -> String {
+    let url = CString::new(url).unwrap();
+    let http = get_steam_http();
+    let request_handle = steam_http_create(http, EHTTPMethod::k_EHTTPMethodGET, url.as_ptr());
+    let mut api_call: SteamAPICall_t = 0;
+    steam_http_send(http, request_handle, &mut api_call as *mut _);
+
+    let mut progress: f32 = 0.0;
+    loop {
+        http_get_download_progress(http, request_handle, &mut progress as *mut _);
+
+        if progress == 100.0 {
+            break;
+        }
+    }
+
+    let mut buf_size: u32 = 0;
+
+    http_get_response_body_size(http, request_handle, &mut buf_size as *mut _);
+
+    let mut buf: Vec<u8> = vec![0; buf_size.try_into().unwrap()];
+    http_get_response_body_data(http, request_handle, &mut buf[0] as *mut _, buf_size);
+
+    steam_http_release(http, request_handle);
+
+    String::from_utf8(buf).unwrap()
+}
 
 #[tauri::command]
 fn get_games() -> Vec<(u32, String, String)> {
@@ -83,12 +120,12 @@ fn get_recent_steam_user() -> String {
 const PREVIEW_WIDTH: u32 = steamworks::sys::k_ScreenshotThumbWidth as u32;
 
 #[tauri::command]
-fn import_screenshots(file_paths: Vec<String>, app_id: u32) {
+fn import_screenshots(file_paths: Vec<String>, app_id: u32) -> String {
     // TODO: Spin up a seperate thread for this
     // and then use events to communicate back to the UI
     // to update the progress
     info!(
-        "Uploading {} screenshots under AppID {}",
+        "Importing {} screenshots under AppID {}",
         file_paths.len(),
         app_id
     );
@@ -102,9 +139,13 @@ fn import_screenshots(file_paths: Vec<String>, app_id: u32) {
         // Initialize steamworks - we don't actually need to use the client object since
         // it doesn't formally implement the ISteamScreenshots interface and we're using
         // the raw bindings for that later.
-        // TODO: Handle errors, usually will be from steam not being open InitFailed error
-        // Also need to test what happens if attempted on an app_id the user doesn't own
-        let (_client, single) = Client::init_app(app_id).unwrap();
+        let (client, single) = match Client::init_app(app_id) {
+            Ok(client) => client,
+            Err(e) => {
+                error!("{}", e);
+                return "Failed to initialize steamworks!\nMake sure steam is open and you own the game you're attempting to import for.".to_string();
+            }
+        };
 
         for file_path in file_paths {
             let img_path = Path::new(&file_path);
@@ -175,6 +216,8 @@ fn import_screenshots(file_paths: Vec<String>, app_id: u32) {
             }
         }
 
+        drop(client);
+
         info!(
             "Import of {} images complete, opening steam screenshots window",
             num_of_files
@@ -191,6 +234,8 @@ fn import_screenshots(file_paths: Vec<String>, app_id: u32) {
     } else {
         warn!("Got no screenshots to import");
     }
+
+    return String::default();
 }
 
 fn main() {

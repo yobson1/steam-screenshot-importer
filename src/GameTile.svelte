@@ -7,6 +7,7 @@
 	import { pictureDir } from "@tauri-apps/api/path";
 	import { importScreenshots } from "./screenshots.js";
 	import VanillaTilt from "vanilla-tilt";
+	import swal from "sweetalert";
 
 	let tile;
 	let img;
@@ -63,7 +64,19 @@
 					multiple: true,
 					title: "Select screenshots to import",
 				}).then((files) => {
-					importScreenshots(files, appID);
+					importScreenshots(files, appID).then((err) => {
+						if (err) {
+							swal({
+								title: "Error",
+								text: err,
+								icon: "error",
+							});
+
+							console.error(err);
+						}
+
+						swal.close();
+					});
 				});
 			});
 		};
