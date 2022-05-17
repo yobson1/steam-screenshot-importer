@@ -12,9 +12,8 @@ function setDark(dark: boolean) {
 }
 
 // Auto-detect dark/light theme choice
-if (localStorage.getItem("theme") === "dark" || (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches)) {
-	document.body.classList.remove("dark-mode");
-	setDark(true);
+if (localStorage.getItem("theme") == "light" || (localStorage.getItem("theme") === null && (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches))) {
+	setDark(false);
 }
 
 const app = new App({
