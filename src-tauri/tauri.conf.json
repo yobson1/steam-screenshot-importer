@@ -59,10 +59,10 @@
     "windows": [
       {
         "fullscreen": false,
-        "height": 600,
+        "height": 780,
         "resizable": true,
         "title": "Steam Screenshot Importer",
-        "width": 800
+        "width": 1370
       }
     ]
   }
