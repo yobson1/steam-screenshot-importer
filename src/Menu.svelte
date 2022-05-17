@@ -36,7 +36,6 @@
 		},
 		{
 			name: "App ID",
-			href: "/",
 			src: "plus-circle.svg",
 			rotate: true,
 			onclick: () => {
@@ -72,7 +71,6 @@
 			rotate: true,
 		},
 		{
-			// TODO: Route to the options page
 			name: "Options",
 			href: "/settings",
 			src: "settings.svg",
