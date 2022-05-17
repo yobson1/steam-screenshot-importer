@@ -97,6 +97,14 @@ h1 {
 	font-size: 16px;
 }
 
+.swal-icon--success__hide-corners, .swal-icon--success:after, .swal-icon--success:before {
+    background-color: var(--background-light);
+}
+
+body.dark-mode .swal-icon--success__hide-corners, body.dark-mode .swal-icon--success:after, body.dark-mode .swal-icon--success:before {
+	background-color: var(--background-dark);
+}
+
 body.dark-mode .swal-modal {
 	background-color: var(--background-dark);
 }
