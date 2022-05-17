@@ -10,9 +10,20 @@ function sendScreenshots(paths: string[] | string, appID: number) {
 
 listen("screenshotImportProgress", event => {
 	swal({
-		title: "Importing screenshots",
+		title: "Importing Screenshots",
 		text: `${event.payload}`,
 		icon: "info",
+		closeOnClickOutside: false,
+		closeOnEsc: false,
+		buttons: [false, false],
+	});
+})
+
+listen("screenshotImportError", event => {
+	swal({
+		title: "Import Error",
+		text: `${event.payload}`,
+		icon: "error",
 		closeOnClickOutside: false,
 		closeOnEsc: false,
 		buttons: [false, false],

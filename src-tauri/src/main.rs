@@ -3,6 +3,7 @@
     windows_subsystem = "windows"
 )]
 
+use core::time;
 use directories::ProjectDirs;
 use image::imageops::{resize, FilterType};
 use image::io::Reader as ImageReader;
@@ -15,6 +16,7 @@ use std::fs::{create_dir_all, read, remove_dir_all, File};
 use std::io::BufWriter;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::thread;
 use steamlocate::{SteamApp, SteamDir};
 use steamworks::sys::EHTTPMethod;
 use steamworks::sys::SteamAPICall_t;
@@ -62,6 +64,7 @@ unsafe fn steam_http_get(url: &str) -> String {
 
 #[tauri::command]
 fn get_games() -> Vec<(u32, String, String)> {
+    // TODO: Handle error when steam can't be found
     let mut steamdir: SteamDir = SteamDir::locate().unwrap();
     let apps_hash: HashMap<u32, Option<SteamApp>> = steamdir.apps().clone();
     let apps: Vec<u32> = apps_hash.keys().cloned().collect();
@@ -168,8 +171,15 @@ async fn import_screenshots(file_paths: Vec<String>, app_id: u32, window: tauri:
             let img = match ImageReader::open(file_path.as_str()).unwrap().decode() {
                 Ok(img) => img,
                 Err(e) => {
-                    // TODO: Send an event to let the client know that the image failed to load
+                    window
+                        .emit(
+                            "screenshotImportError",
+                            &format!("{}.{}\n{}", img_name, extension, e),
+                        )
+                        .unwrap();
                     error!("{}", e);
+                    // Pause for a moment before continuing to give the user a chance to see the error
+                    thread::sleep(time::Duration::from_millis(2500));
                     continue;
                 }
             };
