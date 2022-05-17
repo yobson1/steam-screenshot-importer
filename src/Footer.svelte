@@ -1,16 +1,59 @@
-<script>
+<script lang="ts">
 	import ImgLink from "./ImgLink.svelte";
 	import { darkModeEnabled } from "./stores.js";
 	import { getVersion } from "@tauri-apps/api/app";
+	import { onMount } from "svelte";
 
 	let versionProm = getVersion();
+
+	let version;
+	let augh = new Audio("/easter/juiced.mp3");
+	augh.volume = 0.25;
+	onMount(() => {
+		// Trigger an easter egg if the version number is clicked 6 times
+		version.onclick = (event: MouseEvent) => {
+			if (event.detail % 6 === 0) {
+				// Create image in the center of the screen
+				let img = document.createElement("img");
+				img.src = "/easter/juiced.webp";
+				img.style.position = "absolute";
+				img.style.top = "50%";
+				img.style.left = "50%";
+				img.style.transform = "translate(-50%, -50%)";
+				img.style.width = "100%";
+				img.style.height = "100%";
+				img.style.zIndex = "5";
+				document.body.appendChild(img);
+
+				// Disable scrolling
+				let oldOverflow = document.body.style.overflow;
+				document.body.style.overflow = "hidden";
+
+				// Play sound
+				augh.loop = true;
+				augh.play();
+
+				setTimeout(() => {
+					// Re-enable scrolling & allow image to be removed by a click
+					document.body.style.overflow = oldOverflow;
+					img.onclick = () => {
+						img.remove();
+						augh.pause();
+						augh.currentTime = 0;
+					};
+				}, 3000);
+			}
+		};
+	});
 </script>
 
 <footer>
 	<nav class="left">
-		{#await versionProm then version}
-			<p class="version">v{version}</p>
-		{/await}
+		<p class="version" bind:this={version}>
+			{#await versionProm then version}
+				v{version}
+			{/await}
+		</p>
 	</nav>
 	<nav class="right">
 		<ImgLink
@@ -33,7 +76,8 @@
 <style>
 	.version {
 		margin-inline-start: 1em;
-		pointer-events: none;
+		cursor: default;
+		user-select: none;
 	}
 
 	footer {
