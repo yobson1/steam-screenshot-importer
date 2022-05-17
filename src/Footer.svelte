@@ -33,10 +33,10 @@
 				augh.loop = true;
 				augh.play();
 
+				// Let it be disabled with a click after 3s
 				setTimeout(() => {
-					// Re-enable scrolling & allow image to be removed by a click
-					document.body.style.overflow = oldOverflow;
 					img.onclick = () => {
+						document.body.style.overflow = oldOverflow;
 						img.remove();
 						augh.pause();
 						augh.currentTime = 0;
