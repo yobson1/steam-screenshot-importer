@@ -2,10 +2,22 @@ import { invoke } from "@tauri-apps/api/tauri";
 import { open } from "@tauri-apps/api/dialog";
 import { pictureDir } from "@tauri-apps/api/path";
 import swal from "sweetalert";
+import { listen } from "@tauri-apps/api/event"
 
 function sendScreenshots(paths: string[] | string, appID: number) {
 	return invoke("import_screenshots", { filePaths: paths, appId: appID });
 }
+
+listen("screenshotImportProgress", event => {
+	swal({
+		title: "Importing screenshots",
+		text: `${event.payload}`,
+		icon: "info",
+		closeOnClickOutside: false,
+		closeOnEsc: false,
+		buttons: [false, false],
+	});
+})
 
 function importScreenshots(appID: number) {
 	pictureDir().then((dir) => {
@@ -36,6 +48,14 @@ function importScreenshots(appID: number) {
 			title: "Select screenshots to import",
 		}).then((files) => {
 			if (files !== null && files.length > 0) {
+				swal({
+					title: "Importing screenshots",
+					text: "Loading...",
+					icon: "info",
+					closeOnClickOutside: false,
+					closeOnEsc: false,
+					buttons: [false, false],
+				});
 				sendScreenshots(files, appID).then((err: string) => {
 					if (err) {
 						swal({
@@ -45,6 +65,13 @@ function importScreenshots(appID: number) {
 						});
 
 						console.error(err);
+					} else {
+						swal({
+							title: "Success",
+							text: "Screenshots imported",
+							icon: "success",
+							timer: 5000,
+						})
 					}
 				});
 			} else {

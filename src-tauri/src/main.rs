@@ -146,10 +146,17 @@ async fn import_screenshots(file_paths: Vec<String>, app_id: u32, window: tauri:
             }
         };
 
+        let p = "screenshotImportProgress";
+        window.emit(p, "Import started").unwrap();
+
         for file_path in file_paths {
             let img_path = Path::new(&file_path);
             let img_name = img_path.file_stem().unwrap().to_str().unwrap();
             let extension = img_path.extension().unwrap().to_str().unwrap();
+
+            window
+                .emit(p, &format!("Loading {}.{}", img_name, extension))
+                .unwrap();
 
             let new_file_name = format!("{}_{}.jpg", img_name, app_id);
             let new_thumbnail_name = format!("{}_{}_thumb.jpg", img_name, app_id);
@@ -183,6 +190,12 @@ async fn import_screenshots(file_paths: Vec<String>, app_id: u32, window: tauri:
                 continue;
             } else if extension != "jpg" && extension != "jpeg" {
                 info!("Converting image {}.{} to jpg", img_name, extension);
+                window
+                    .emit(
+                        p,
+                        &format!("Converting image {}.{} to jpeg", img_name, extension),
+                    )
+                    .unwrap();
                 let file = File::create(&new_img_path).unwrap();
                 let mut writer = BufWriter::new(file);
                 img.write_to(&mut writer, ImageOutputFormat::Jpeg(95))
@@ -194,6 +207,12 @@ async fn import_screenshots(file_paths: Vec<String>, app_id: u32, window: tauri:
 
             // Create thumbnail image
             info!("Resizing image {}.{} for thumbnail", img_name, extension);
+            window
+                .emit(
+                    p,
+                    &format!("Resizing image {}.{} for thumbnail", img_name, extension),
+                )
+                .unwrap();
 
             let thumb_img_path = cache_dir.join(&new_thumbnail_name);
 
@@ -223,8 +242,8 @@ async fn import_screenshots(file_paths: Vec<String>, app_id: u32, window: tauri:
                     img.height().try_into().unwrap(),
                 );
                 single.run_callbacks();
-                info!("Import of {}.{} complete", img_name, extension);
             }
+            info!("Import of {}.{} complete", img_name, extension);
         }
 
         drop(client);
