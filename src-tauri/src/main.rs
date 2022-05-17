@@ -117,7 +117,9 @@ fn get_recent_steam_user() -> String {
     return steam_user.to_string();
 }
 
-const PREVIEW_WIDTH: u32 = steamworks::sys::k_ScreenshotThumbWidth as u32;
+const THUMB_WIDTH: u32 = steamworks::sys::k_ScreenshotThumbWidth as u32;
+const MAX_SIDE: u32 = 16000;
+const MAX_RESOLUTION: u32 = 26210175;
 
 #[tauri::command]
 fn import_screenshots(file_paths: Vec<String>, app_id: u32) -> String {
@@ -164,13 +166,21 @@ fn import_screenshots(file_paths: Vec<String>, app_id: u32) -> String {
                 .decode()
                 .unwrap();
 
-            // Convert to jpg if needed
-            // TODO: Check these
-            // steamMaxSideSize = 16000;
-            // steamMaxResolution = 26210175;
+            // Convert to jpg or downscale if needed
             let new_img_path = cache_dir.join(&new_file_name);
 
-            if extension != "jpg" && extension != "jpeg" {
+            if img.width() > MAX_SIDE
+                || img.height() > MAX_SIDE
+                || img.width() * img.height() > MAX_RESOLUTION
+            {
+                // TODO: Downscale the image to fit within the max resolution
+                warn!(
+                    "Image {} is too large to be imported, it will be skipped",
+                    img_name
+                );
+
+                continue;
+            } else if extension != "jpg" && extension != "jpeg" {
                 info!("Converting image {}.{} to jpg", img_name, extension);
                 let file = File::create(&new_img_path).unwrap();
                 let mut writer = BufWriter::new(file);
@@ -186,8 +196,8 @@ fn import_screenshots(file_paths: Vec<String>, app_id: u32) -> String {
 
             let preview_img_path = cache_dir.join(&new_thumbnail_name);
 
-            let preview_height = (PREVIEW_WIDTH * img.height()) / img.width();
-            let preview_img = resize(&img, PREVIEW_WIDTH, preview_height, FilterType::Lanczos3);
+            let preview_height = (THUMB_WIDTH * img.height()) / img.width();
+            let preview_img = resize(&img, THUMB_WIDTH, preview_height, FilterType::Lanczos3);
             let file = File::create(&preview_img_path).unwrap();
             let mut writer = BufWriter::new(&file);
             preview_img
