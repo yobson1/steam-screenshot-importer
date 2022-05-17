@@ -16,8 +16,8 @@ use std::io::BufWriter;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use steamlocate::{SteamApp, SteamDir};
-use steamworks::sys::SteamAPI_ISteamScreenshots_AddScreenshotToLibrary as AddScreenshotToLibrary;
-use steamworks::sys::SteamAPI_SteamScreenshots_v003 as GetISteamScreenshots;
+use steamworks::sys::SteamAPI_ISteamScreenshots_AddScreenshotToLibrary as add_screenshot_to_library;
+use steamworks::sys::SteamAPI_SteamScreenshots_v003 as get_steam_screenshots;
 use steamworks::Client;
 use steamy_vdf as vdf;
 
@@ -160,10 +160,10 @@ fn import_screenshots(file_paths: Vec<String>, app_id: u32) {
                 preview_img_path.display()
             );
             unsafe {
-                let screenshots = GetISteamScreenshots();
+                let screenshots = get_steam_screenshots();
                 let screenshot_path = CString::new(&*new_img_path.to_string_lossy()).unwrap();
                 let thumbnail_path = CString::new(&*preview_img_path.to_string_lossy()).unwrap();
-                AddScreenshotToLibrary(
+                add_screenshot_to_library(
                     screenshots,
                     screenshot_path.as_ptr(),
                     thumbnail_path.as_ptr(),
