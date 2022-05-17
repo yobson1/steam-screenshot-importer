@@ -1,10 +1,17 @@
 <script>
 	import ImgLink from "./ImgLink.svelte";
 	import { darkModeEnabled } from "./stores.js";
+	import { getVersion } from "@tauri-apps/api/app";
+
+	let versionProm = getVersion();
 </script>
 
 <footer>
-	<nav class="left" />
+	<nav class="left">
+		{#await versionProm then version}
+			<p class="version">v{version}</p>
+		{/await}
+	</nav>
 	<nav class="right">
 		<ImgLink
 			href="https://buymeacoffee.com/yobson"
@@ -24,6 +31,11 @@
 </footer>
 
 <style>
+	.version {
+		margin-inline-start: 1em;
+		pointer-events: none;
+	}
+
 	footer {
 		display: flex;
 		position: fixed;
