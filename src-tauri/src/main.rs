@@ -122,10 +122,7 @@ const MAX_SIDE: u32 = 16000;
 const MAX_RESOLUTION: u32 = 26210175;
 
 #[tauri::command]
-fn import_screenshots(file_paths: Vec<String>, app_id: u32) -> String {
-    // TODO: Spin up a seperate thread for this
-    // and then use events to communicate back to the UI
-    // to update the progress
+async fn import_screenshots(file_paths: Vec<String>, app_id: u32, window: tauri::Window) -> String {
     info!(
         "Importing {} screenshots under AppID {}",
         file_paths.len(),
@@ -161,10 +158,14 @@ fn import_screenshots(file_paths: Vec<String>, app_id: u32) -> String {
 
             // Load original image
             info!("Loading image: {}", img_path.display());
-            let img = ImageReader::open(file_path.as_str())
-                .unwrap()
-                .decode()
-                .unwrap();
+            let img = match ImageReader::open(file_path.as_str()).unwrap().decode() {
+                Ok(img) => img,
+                Err(e) => {
+                    // TODO: Send an event to let the client know that the image failed to load
+                    error!("{}", e);
+                    continue;
+                }
+            };
 
             // Convert to jpg or downscale if needed
             let new_img_path = cache_dir.join(&new_file_name);
