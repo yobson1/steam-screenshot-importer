@@ -6,8 +6,6 @@
 <footer>
 	<nav class="left" />
 	<nav class="right">
-		<!-- TODO: Add light mode support -->
-
 		<ImgLink
 			href="https://buymeacoffee.com/yobson"
 			src="bmc-logo.svg"
