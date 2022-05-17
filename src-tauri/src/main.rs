@@ -194,13 +194,13 @@ fn import_screenshots(file_paths: Vec<String>, app_id: u32) -> String {
             // Create thumbnail image
             info!("Resizing image {}.{} for thumbnail", img_name, extension);
 
-            let preview_img_path = cache_dir.join(&new_thumbnail_name);
+            let thumb_img_path = cache_dir.join(&new_thumbnail_name);
 
-            let preview_height = (THUMB_WIDTH * img.height()) / img.width();
-            let preview_img = resize(&img, THUMB_WIDTH, preview_height, FilterType::Lanczos3);
-            let file = File::create(&preview_img_path).unwrap();
+            let thumb_height = (THUMB_WIDTH * img.height()) / img.width();
+            let thumb_img = resize(&img, THUMB_WIDTH, thumb_height, FilterType::Lanczos3);
+            let file = File::create(&thumb_img_path).unwrap();
             let mut writer = BufWriter::new(&file);
-            preview_img
+            thumb_img
                 .write_to(&mut writer, ImageOutputFormat::Jpeg(95))
                 .unwrap();
 
@@ -208,12 +208,12 @@ fn import_screenshots(file_paths: Vec<String>, app_id: u32) -> String {
             info!(
                 "Importing screenshot {} {}",
                 new_img_path.display(),
-                preview_img_path.display()
+                thumb_img_path.display()
             );
             unsafe {
                 let screenshots = get_steam_screenshots();
                 let screenshot_path = CString::new(&*new_img_path.to_string_lossy()).unwrap();
-                let thumbnail_path = CString::new(&*preview_img_path.to_string_lossy()).unwrap();
+                let thumbnail_path = CString::new(&*thumb_img_path.to_string_lossy()).unwrap();
                 add_screenshot_to_library(
                     screenshots,
                     screenshot_path.as_ptr(),
