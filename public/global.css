@@ -140,3 +140,31 @@ body.dark-mode input {
 	background-color: #333;
 	color: white;
 }
+
+body::-webkit-scrollbar {
+	width: 8px;
+}
+
+body::-webkit-scrollbar-track {
+	background-color: hsl(0, 0%, 80%);
+}
+
+body::-webkit-scrollbar-thumb {
+	background-color: hsl(0, 0%, 60%);
+}
+
+body::-webkit-scrollbar-thumb:hover {
+	background-color: hsl(0, 0%, 40%);
+}
+
+body.dark-mode::-webkit-scrollbar-track {
+	background-color: hsl(0, 0%, 20%);
+}
+
+body.dark-mode::-webkit-scrollbar-thumb {
+	background-color: hsl(0, 0%, 30%);
+}
+
+body.dark-mode::-webkit-scrollbar-thumb:hover {
+	background-color: hsl(0, 0%, 40%);
+}
