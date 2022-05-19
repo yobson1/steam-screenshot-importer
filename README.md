@@ -23,3 +23,6 @@ Currently only distributing & testing for win64
 ![Screenshot](https://i.imgur.com/uh6TnLB.png)
 
 ![Screenshot](https://i.imgur.com/ZmsFQd5.png)
+
+## Light theme 🤷‍♂️
+![Screenshot](https://i.imgur.com/0OjkPnX.png)
