@@ -3,7 +3,6 @@
     windows_subsystem = "windows"
 )]
 
-use core::time;
 use directories::ProjectDirs;
 use image::imageops::{resize, FilterType};
 use image::io::Reader as ImageReader;
@@ -17,6 +16,7 @@ use std::io::BufWriter;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::thread;
+use std::time::{Duration, Instant};
 use steamlocate::{SteamApp, SteamDir};
 use steamworks::sys::EHTTPMethod;
 use steamworks::sys::SteamAPICall_t;
@@ -31,6 +31,8 @@ use steamworks::sys::SteamAPI_SteamHTTP_v003 as get_steam_http;
 use steamworks::sys::SteamAPI_SteamScreenshots_v003 as get_steam_screenshots;
 use steamworks::Client;
 use steamy_vdf as vdf;
+use sysinfo::{System, SystemExt};
+use winreg::{enums::HKEY_CURRENT_USER, RegKey};
 
 const LIB_CACHE_PATH: &str = "appcache\\librarycache\\";
 
@@ -138,6 +140,43 @@ async fn import_screenshots(file_paths: Vec<String>, app_id: u32, window: tauri:
         let cache_dir = project_dirs.cache_dir();
         create_dir_all(&cache_dir).unwrap();
 
+        // Check if steam is running
+        let mut s = System::new();
+        s.refresh_processes();
+        let processes = s.processes_by_exact_name("steam.exe");
+        if processes.count() == 0 {
+            warn!("Steam is not running, attempting to start it automatically");
+            // Open steam
+            Command::new("explorer")
+                .arg(format!("steam://open/main"))
+                .spawn()
+                .unwrap();
+
+            // Wait for steam to start with a timeout of 20s
+            let now = Instant::now();
+            loop {
+                s.refresh_processes();
+                let processes = s.processes_by_exact_name("steam.exe");
+                if processes.count() > 0 {
+                    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+                    let active_process = hkcu
+                        .open_subkey("SOFTWARE\\Valve\\Steam\\ActiveProcess")
+                        .unwrap();
+                    let active_user: u32 = active_process.get_value("ActiveUser").unwrap();
+
+                    if active_user != 0 {
+                        info!("Steam has started successfully");
+                        break;
+                    }
+                }
+                if now.elapsed().as_secs() > 20 {
+                    error!("Steam failed to start, aborting");
+                    return "Steam is not running and failed to automatically start".to_string();
+                }
+                thread::sleep(Duration::from_millis(500));
+            }
+        }
+
         // Initialize steamworks - we don't actually need to use the client object since
         // it doesn't formally implement the ISteamScreenshots interface and we're using
         // the raw bindings for that later.
@@ -179,7 +218,7 @@ async fn import_screenshots(file_paths: Vec<String>, app_id: u32, window: tauri:
                         .unwrap();
                     error!("{}", e);
                     // Pause for a moment before continuing to give the user a chance to see the error
-                    thread::sleep(time::Duration::from_millis(2500));
+                    thread::sleep(Duration::from_millis(2500));
                     continue;
                 }
             };
@@ -273,6 +312,7 @@ async fn import_screenshots(file_paths: Vec<String>, app_id: u32, window: tauri:
         remove_dir_all(&cache_dir).unwrap();
     } else {
         warn!("Got no screenshots to import");
+        return "No screenshots to import!".to_string();
     }
 
     return String::default();

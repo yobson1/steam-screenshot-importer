@@ -26,6 +26,8 @@ image = "0.24.2"
 directories = "4.0.1"
 log = "0.4.17"
 simple_logger = "2.1.0"
+sysinfo = "0.23.12"
+winreg = "0.10.1"
 
 [features]
 # by default Tauri runs in production mode
