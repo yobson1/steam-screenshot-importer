@@ -7,11 +7,12 @@ use directories::ProjectDirs;
 use image::imageops::{resize, FilterType};
 use image::io::Reader as ImageReader;
 use image::ImageOutputFormat;
+use lazy_static::lazy_static;
 use log::{error, info, warn};
 use simple_logger::SimpleLogger;
 use std::collections::HashMap;
 use std::ffi::CString;
-use std::fs::{create_dir_all, read, remove_dir_all, File};
+use std::fs::{create_dir, create_dir_all, read, remove_dir_all, File};
 use std::io::BufWriter;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -35,6 +36,10 @@ use sysinfo::{System, SystemExt};
 use winreg::{enums::HKEY_CURRENT_USER, RegKey};
 
 const LIB_CACHE_PATH: &str = "appcache\\librarycache\\";
+
+lazy_static! {
+    static ref PROJECT_DIRS: ProjectDirs = ProjectDirs::from("com", "yob", "ssi").unwrap();
+}
 
 unsafe fn steam_http_get(url: &str) -> String {
     let url = CString::new(url).unwrap();
@@ -136,9 +141,7 @@ async fn import_screenshots(file_paths: Vec<String>, app_id: u32, window: tauri:
 
     let num_of_files = file_paths.len();
     if num_of_files > 0 {
-        let project_dirs = ProjectDirs::from("com", "yob", "ssi").unwrap();
-        let cache_dir = project_dirs.cache_dir();
-        create_dir_all(&cache_dir).unwrap();
+        let cache_dir = PROJECT_DIRS.cache_dir();
 
         // Check if steam is running
         let mut s = System::new();
@@ -309,7 +312,10 @@ async fn import_screenshots(file_paths: Vec<String>, app_id: u32, window: tauri:
             .unwrap();
 
         // Empty the cache
-        remove_dir_all(&cache_dir).unwrap();
+        info!("Emptying cache");
+        remove_dir_all(&cache_dir)
+            .and_then(|_| create_dir(&cache_dir))
+            .unwrap();
     } else {
         warn!("Got no screenshots to import");
         return "No screenshots to import!".to_string();
@@ -323,6 +329,10 @@ fn main() {
         .with_level(log::LevelFilter::Info)
         .init()
         .unwrap();
+
+    let cache_dir = PROJECT_DIRS.cache_dir();
+    info!("Creating cache directory: {}", cache_dir.display());
+    create_dir_all(&cache_dir).unwrap();
 
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
