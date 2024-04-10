@@ -20,19 +20,6 @@
 			"max-glare": 0.5,
 		});
 
-		tile.onmouseover = () => {
-			tile.style.margin = "1rem";
-			img.style.transform = tile.style.transform;
-			tile.oldPad = tile.style.padding;
-			tile.style.padding = 0;
-		};
-
-		tile.onmouseout = () => {
-			tile.style.margin = "0";
-			img.style.transform = null;
-			tile.style.padding = tile.oldPad;
-		};
-
 		tile.onclick = () => {
 			importScreenshots(appID);
 		};
@@ -56,12 +43,12 @@
 		transform-style: preserve-3d;
 		text-align: center;
 		float: left;
-		transition: margin var(--transition-speed);
 		user-select: none;
 		width: 210px;
 		height: 315px;
-		padding: 0.8rem;
 		cursor: pointer;
+		box-sizing: border-box;
+		margin: 1rem;
 	}
 
 	span.no-img-title {
@@ -75,7 +62,6 @@
 		visibility: hidden;
 		user-select: none;
 		pointer-events: none;
-		box-sizing: border-box;
 		overflow: hidden;
 		color: #b9c2cc;
 	}
