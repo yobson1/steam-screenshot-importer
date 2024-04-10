@@ -1,10 +1,10 @@
 {
-	"name": "v0.1.2",
-	"notes": "Fixed auto-update",
+	"name": "v0.1.3",
+	"notes": "Fixed layout shift on tile hover",
 	"platforms": {
 		"windows-x86_64": {
-			"signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSNFg1dFVpS0pVbGNxcU9oWEpyc0FyL1JjVGtYODFCL2dYeTkzQWQzL0FraWF5clFzT05EbHBraXVFWFNWWnY0WGNpYm43WGdnN3BpZWxXVlduWlFIQzZKRDNwR2xkK3c0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNjUyNzkxMTgyCWZpbGU6Li9zcmMtdGF1cmkvdGFyZ2V0L3JlbGVhc2UvYnVuZGxlL21zaS9TdGVhbSBTY3JlZW5zaG90IEltcG9ydGVyXzAuMS4yX3g2NF9lbi1VUy5tc2kuemlwCkVhK2luTEpCTjdYNTFRMmlxZXd3OVBudGpmODFiZUNLK2k2SEZxUEsvYUF5dG03K3BXYnNKTjdRTTRDRDRJcSt4TjV1SlpCKzZEWTlqYTJFSWErNkRnPT0K",
-			"url": "https://github.com/yobson1/steam-screenshot-importer/releases/download/v0.1.2/Steam.Screenshot.Importer_0.1.2_x64_en-US.msi.zip"
+			"signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSNFg1dFVpS0pVbGMvQ2hxUkkwVDQyV3lJVGliSXFyeGREa05oWUpNRDVWYXYweXFNaEZYUUQ0KzR4SVNYZVZpS1hPMjZrOExqclJnZ2R2MloyNGtQRzV1Z1BMSHdqTnc0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzEyNzQ1MTUxCWZpbGU6U3RlYW0gU2NyZWVuc2hvdCBJbXBvcnRlcl8wLjEuM194NjRfZW4tVVMubXNpLnppcApKK0FNc2NkTmFoa3dFb3lkdTRUTXhJaENQSTVIWnBUd0NIUW13T3F5RUhUaHl3Ym1hUDJya0JTaWNZZlpCamJ0SmlpNEJPRDhTR1F3TjFnMkNCaHJEZz09Cg==",
+			"url": "https://github.com/yobson1/steam-screenshot-importer/releases/download/v0.1.3/Steam.Screenshot.Importer_0.1.3_x64_en-US.msi.zip"
 		}
 	}
 }

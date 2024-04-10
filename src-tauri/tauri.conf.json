@@ -7,8 +7,7 @@
     "distDir": "../public"
   },
   "package": {
-    "productName": "Steam Screenshot Importer",
-    "version": "0.1.2"
+    "productName": "Steam Screenshot Importer"
   },
   "tauri": {
     "allowlist": {
