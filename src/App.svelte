@@ -1,4 +1,4 @@
-<script lang="ts">
+<script>
 	import Header from "./Header.svelte";
 	import Footer from "./Footer.svelte";
 	import GameTile from "./GameTile.svelte";
@@ -7,7 +7,7 @@
 	import { Route } from "tinro";
 	import { invoke } from "@tauri-apps/api/tauri";
 
-	let get_games_prom: Promise<string[]> = invoke("get_games");
+	let get_games_prom = invoke("get_games");
 	let steam_user_prom = invoke("get_recent_steam_user");
 </script>
 
