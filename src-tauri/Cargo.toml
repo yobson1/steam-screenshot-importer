@@ -12,12 +12,12 @@ rust-version = "1.57"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-tauri-build = { version = "1.0.0", features = [] }
+tauri-build = { version = "1.5", features = [] }
 
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-tauri = { version = "1.0.0", features = ["api-all", "updater"] }
+tauri = { version = "1.6", features = ["api-all", "updater"] }
 steamlocate = "1.0"
 base64 = "0.13.0"
 steamy-vdf = "0.2.0"
@@ -26,7 +26,7 @@ image = "0.24.2"
 directories = "4.0.1"
 log = "0.4.17"
 simple_logger = "2.1.0"
-sysinfo = "0.23.12"
+sysinfo = "0.30"
 winreg = "0.10.1"
 lazy_static = "1.4"
 

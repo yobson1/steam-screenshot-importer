@@ -32,7 +32,7 @@ use steamworks::sys::SteamAPI_SteamHTTP_v003 as get_steam_http;
 use steamworks::sys::SteamAPI_SteamScreenshots_v003 as get_steam_screenshots;
 use steamworks::Client;
 use steamy_vdf as vdf;
-use sysinfo::{System, SystemExt};
+use sysinfo::System;
 use winreg::{enums::HKEY_CURRENT_USER, RegKey};
 
 const LIB_CACHE_PATH: &str = "appcache\\librarycache\\";
