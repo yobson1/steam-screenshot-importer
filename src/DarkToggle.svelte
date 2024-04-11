@@ -1,11 +1,11 @@
 <script>
-	import { darkModeEnabled } from "./stores.js";
+	import { darkModeEnabled } from './stores.js';
 
 	function toggle() {
-		window.document.body.classList.toggle("dark-mode");
-		let isDark = window.document.body.classList.contains("dark-mode");
+		window.document.body.classList.toggle('dark-mode');
+		let isDark = window.document.body.classList.contains('dark-mode');
 		darkModeEnabled.set(isDark);
-		localStorage.setItem("theme", isDark ? "dark" : "light");
+		localStorage.setItem('theme', isDark ? 'dark' : 'light');
 	}
 </script>
 
@@ -13,7 +13,7 @@
 
 <style>
 	button {
-		background-image: url("/moon.svg");
+		background-image: url('/moon.svg');
 		background-size: cover;
 		border: none;
 		cursor: pointer;
@@ -30,7 +30,7 @@
 	}
 
 	:global(body.dark-mode) button {
-		background-image: url("/sun.svg");
+		background-image: url('/sun.svg');
 		filter: invert();
 	}
 </style>

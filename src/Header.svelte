@@ -1,8 +1,8 @@
 <script>
-	import DarkToggle from "./DarkToggle.svelte";
-	import { Hamburger } from "svelte-hamburgers";
-	import Menu from "./Menu.svelte";
-	import { darkModeEnabled } from "./stores.js";
+	import DarkToggle from './DarkToggle.svelte';
+	import { Hamburger } from 'svelte-hamburgers';
+	import Menu from './Menu.svelte';
+	import { darkModeEnabled } from './stores.js';
 
 	let open;
 </script>
@@ -10,11 +10,7 @@
 <header>
 	<nav class="left">
 		<Menu bind:open />
-		<Hamburger
-			bind:open
-			--color={$darkModeEnabled ? "white" : "black"}
-			type="arrowalt"
-		/>
+		<Hamburger bind:open --color={$darkModeEnabled ? 'white' : 'black'} type="arrowalt" />
 	</nav>
 	<nav class="right">
 		<DarkToggle />

@@ -1,6 +1,6 @@
 <script>
-	import { onMount } from "svelte";
-	import confetti from "canvas-confetti";
+	import { onMount } from 'svelte';
+	import confetti from 'canvas-confetti';
 
 	let btn;
 
@@ -9,12 +9,12 @@
 			confetti({
 				origin: {
 					x: event.clientX / window.visualViewport.width,
-					y: event.clientY / window.visualViewport.height,
+					y: event.clientY / window.visualViewport.height
 				},
 				angle: 130,
 				ticks: 300,
 				particleCount: 100,
-				disableForReducedMotion: true,
+				disableForReducedMotion: true
 			});
 		};
 	});

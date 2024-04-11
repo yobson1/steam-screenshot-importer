@@ -2,9 +2,9 @@
 	export let imgSrc;
 	export let appID;
 	export let appName;
-	import { onMount } from "svelte";
-	import { importScreenshots } from "./screenshots.js";
-	import VanillaTilt from "vanilla-tilt";
+	import { onMount } from 'svelte';
+	import { importScreenshots } from './screenshots.js';
+	import VanillaTilt from 'vanilla-tilt';
 
 	let tile;
 	let img;
@@ -14,10 +14,10 @@
 			max: 12,
 			perspective: 900,
 			scale: 1.1,
-			axis: "y",
-			easing: "cubic-bezier(.03, .7, .8 ,1)",
+			axis: 'y',
+			easing: 'cubic-bezier(.03, .7, .8 ,1)',
 			glare: true,
-			"max-glare": 0.5,
+			'max-glare': 0.5
 		});
 
 		tile.onclick = () => {
@@ -25,9 +25,9 @@
 		};
 
 		img.onerror = () => {
-			img.src = "defaultappimage.png";
-			let title = tile.querySelector("span");
-			title.style.visibility = "visible";
+			img.src = 'defaultappimage.png';
+			let title = tile.querySelector('span');
+			title.style.visibility = 'visible';
 		};
 	});
 </script>

@@ -1,15 +1,12 @@
 <h1>About</h1>
 <div>
 	<p>
-		A Tauri app written with Rust & Svelte using the Steamworks API to
-		import any image as a screenshot for any game you own.
+		A Tauri app written with Rust & Svelte using the Steamworks API to import any image as a
+		screenshot for any game you own.
 	</p>
 	<p class="github-link">
 		Please report bugs and submit feature requests on the
-		<a
-			href="https://github.com/yobson1/steam-screenshot-importer/issues"
-			target="_blank"
-		>
+		<a href="https://github.com/yobson1/steam-screenshot-importer/issues" target="_blank">
 			GitHub repository.
 		</a>
 	</p>
@@ -73,7 +70,7 @@
 
 	.github-link::after {
 		display: block;
-		content: "and maybe leave a star? 😳👉💖";
+		content: 'and maybe leave a star? 😳👉💖';
 		font-size: 12px;
 	}
 </style>

@@ -1,32 +1,32 @@
-import { invoke } from "@tauri-apps/api/tauri";
-import { open } from "@tauri-apps/api/dialog";
-import { pictureDir } from "@tauri-apps/api/path";
-import swal from "sweetalert";
-import { listen } from "@tauri-apps/api/event";
+import { invoke } from '@tauri-apps/api/tauri';
+import { open } from '@tauri-apps/api/dialog';
+import { pictureDir } from '@tauri-apps/api/path';
+import swal from 'sweetalert';
+import { listen } from '@tauri-apps/api/event';
 
 function sendScreenshots(paths: string[] | string, appID: number) {
-	return invoke("import_screenshots", { filePaths: paths, appId: appID });
+	return invoke('import_screenshots', { filePaths: paths, appId: appID });
 }
 
-listen("screenshotImportProgress", event => {
+listen('screenshotImportProgress', (event) => {
 	swal({
-		title: "Importing Screenshots",
+		title: 'Importing Screenshots',
 		text: `${event.payload}`,
-		icon: "info",
+		icon: 'info',
 		closeOnClickOutside: false,
 		closeOnEsc: false,
-		buttons: [false, false],
+		buttons: [false, false]
 	});
 });
 
-listen("screenshotImportError", event => {
+listen('screenshotImportError', (event) => {
 	swal({
-		title: "Import Error",
+		title: 'Import Error',
 		text: `${event.payload}`,
-		icon: "error",
+		icon: 'error',
 		closeOnClickOutside: false,
 		closeOnEsc: false,
-		buttons: [false, false],
+		buttons: [false, false]
 	});
 });
 
@@ -37,59 +37,59 @@ function importScreenshots(appID: number) {
 			defaultPath: dir,
 			filters: [
 				{
-					name: "Images",
+					name: 'Images',
 					extensions: [
-						"png",
-						"jpg",
-						"jpeg",
-						"bmp",
-						"ico",
-						"tiff",
-						"tif",
-						"webp",
-						"avif",
-						"pnm",
-						"dds",
-						"tga",
-						"exr",
-					],
-				},
+						'png',
+						'jpg',
+						'jpeg',
+						'bmp',
+						'ico',
+						'tiff',
+						'tif',
+						'webp',
+						'avif',
+						'pnm',
+						'dds',
+						'tga',
+						'exr'
+					]
+				}
 			],
 			multiple: true,
-			title: "Select screenshots to import",
+			title: 'Select screenshots to import'
 		}).then((files) => {
 			if (files !== null && files.length > 0) {
 				swal({
-					title: "Importing Screenshots",
-					text: "Loading...",
-					icon: "info",
+					title: 'Importing Screenshots',
+					text: 'Loading...',
+					icon: 'info',
 					closeOnClickOutside: false,
 					closeOnEsc: false,
-					buttons: [false, false],
+					buttons: [false, false]
 				});
 				sendScreenshots(files, appID).then((err: string) => {
 					if (err) {
 						swal({
-							title: "Error",
+							title: 'Error',
 							text: err,
-							icon: "error",
+							icon: 'error'
 						});
 
 						console.error(err);
 					} else {
 						swal({
-							title: "Success",
-							text: "Screenshots imported",
-							icon: "success",
-							timer: 5000,
+							title: 'Success',
+							text: 'Screenshots imported',
+							icon: 'success',
+							timer: 5000
 						});
 					}
 				});
 			} else {
 				swal({
-					title: "Error",
-					text: "No files selected",
-					icon: "error",
+					title: 'Error',
+					text: 'No files selected',
+					icon: 'error'
 				});
 			}
 		});

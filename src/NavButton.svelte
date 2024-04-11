@@ -1,5 +1,5 @@
 <script>
-	import { onMount } from "svelte";
+	import { onMount } from 'svelte';
 
 	export let name,
 		href,
@@ -16,7 +16,7 @@
 <a {href}>
 	<button bind:this={btn}>
 		<span class="img-container">
-			<img class={rotate ? "rotate" : ""} {src} alt={name} />
+			<img class={rotate ? 'rotate' : ''} {src} alt={name} />
 		</span>
 		<span>{name}</span>
 	</button>

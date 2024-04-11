@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { fly } from "svelte/transition";
-	import NavButton from "./NavButton.svelte";
-	import swal from "sweetalert";
-	import { importScreenshots } from "./screenshots.js";
-	import { onMount } from "svelte";
+	import { fly } from 'svelte/transition';
+	import NavButton from './NavButton.svelte';
+	import swal from 'sweetalert';
+	import { importScreenshots } from './screenshots.js';
+	import { onMount } from 'svelte';
 
 	export let open = false;
 	export let width = 96;
@@ -14,12 +14,8 @@
 			let path = event.composedPath();
 			if (
 				!path.includes(menu) &&
-				!path.includes(
-					document.getElementsByClassName("hamburger")[0]
-				) &&
-				!path.includes(
-					document.getElementsByClassName("swal-overlay")[0]
-				)
+				!path.includes(document.getElementsByClassName('hamburger')[0]) &&
+				!path.includes(document.getElementsByClassName('swal-overlay')[0])
 			) {
 				open = false;
 			}
@@ -29,62 +25,60 @@
 	// https://www.npmjs.com/package/svelte-simple-modal
 	let buttons = [
 		{
-			name: "Home",
-			href: "/",
-			src: "home.svg",
-			rotate: false,
+			name: 'Home',
+			href: '/',
+			src: 'home.svg',
+			rotate: false
 		},
 		{
-			name: "App ID",
-			src: "plus-circle.svg",
+			name: 'App ID',
+			src: 'plus-circle.svg',
 			rotate: true,
 			onclick: () => {
 				swal({
-					title: "Custom App ID",
+					title: 'Custom App ID',
 					content: {
-						element: "input",
+						element: 'input',
 						attributes: {
-							placeholder: "Enter custom app ID",
-						},
-					},
+							placeholder: 'Enter custom app ID'
+						}
+					}
 				}).then((appID: string) => {
 					if (appID != null) {
 						let appIDInt = parseInt(appID);
 
 						if (isNaN(appIDInt)) {
 							swal({
-								title: "Invalid App ID",
-								text: "Please enter a valid app ID",
-								icon: "error",
+								title: 'Invalid App ID',
+								text: 'Please enter a valid app ID',
+								icon: 'error'
 							});
 						} else {
 							importScreenshots(appIDInt);
 						}
 					}
 				});
-			},
+			}
 		},
 		{
-			name: "About",
-			href: "/about",
-			src: "info.svg",
-			rotate: true,
+			name: 'About',
+			href: '/about',
+			src: 'info.svg',
+			rotate: true
 		},
 		{
-			name: "Options",
-			href: "/settings",
-			src: "settings.svg",
-			rotate: true,
-		},
+			name: 'Options',
+			href: '/settings',
+			src: 'settings.svg',
+			rotate: true
+		}
 	];
 </script>
 
 <div
 	bind:this={menu}
 	class="menu"
-	style="left: {open
-		? 'calc(-1 * var(--body-padding))'
-		: 'calc(-' + width + 'px - 2.5rem)'};
+	style="left: {open ? 'calc(-1 * var(--body-padding))' : 'calc(-' + width + 'px - 2.5rem)'};
 		width: {width}px;
 		box-shadow: {open ? '0 0 4px 5px rgba(0, 0, 0, 0.4)' : 'none'};"
 >
