@@ -210,7 +210,7 @@ async fn import_screenshots(file_paths: Vec<String>, app_id: u32, window: tauri:
 
             // Load original image
             info!("Loading image: {}", img_path.display());
-            let img = match ImageReader::open(file_path.as_str()).unwrap().decode() {
+            let mut img = match ImageReader::open(file_path.as_str()).unwrap().decode() {
                 Ok(img) => img,
                 Err(e) => {
                     window
@@ -233,14 +233,36 @@ async fn import_screenshots(file_paths: Vec<String>, app_id: u32, window: tauri:
                 || img.height() > MAX_SIDE
                 || img.width() * img.height() > MAX_RESOLUTION
             {
-                // TODO: Downscale the image to fit within the max resolution
                 warn!(
-                    "Image {} is too large to be imported, it will be skipped",
-                    img_name
+                    "Image {}.{} is too large to be imported, it will be downscaled",
+                    img_name, extension
                 );
 
-                continue;
-            } else if extension != "jpg" && extension != "jpeg" {
+                window
+                    .emit(
+                        p,
+                        &format!(
+                            "Resizing {}.{} to fit within steam's limits",
+                            img_name, extension
+                        ),
+                    )
+                    .unwrap();
+
+                let scale_factor = f32::min(
+                    MAX_SIDE as f32 / f32::max(img.width() as f32, img.height() as f32),
+                    MAX_RESOLUTION as f32 / (img.width() * img.height()) as f32,
+                );
+                let new_width = (img.width() as f32 * scale_factor) as u32;
+                let new_height = (img.height() as f32 * scale_factor) as u32;
+                img = img.resize_exact(new_width, new_height, FilterType::Lanczos3);
+
+                info!(
+                    "{}.{} new size: {}x{}",
+                    img_name, extension, new_width, new_height
+                );
+            }
+
+            if extension != "jpg" && extension != "jpeg" {
                 info!("Converting image {}.{} to jpg", img_name, extension);
                 window
                     .emit(
@@ -313,9 +335,9 @@ async fn import_screenshots(file_paths: Vec<String>, app_id: u32, window: tauri:
 
         // Empty the cache
         info!("Emptying cache");
-        remove_dir_all(&cache_dir)
-            .and_then(|_| create_dir(&cache_dir))
-            .unwrap();
+        // remove_dir_all(&cache_dir)
+        // .and_then(|_| create_dir(&cache_dir))
+        // .unwrap();
     } else {
         warn!("Got no screenshots to import");
         return "No screenshots to import!".to_string();
