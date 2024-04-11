@@ -95,17 +95,17 @@ fn get_games() -> Result<Vec<(u32, String, String)>, String> {
 }
 
 #[tauri::command]
-fn get_recent_steam_user() -> String {
-    let steamdir: SteamDir = SteamDir::locate().unwrap();
+fn get_recent_steam_user() -> Result<String, String> {
+    let steamdir: SteamDir = SteamDir::locate().ok_or("Failed to locate Steam installation")?;
     let steam_path: PathBuf = steamdir.path;
     let vdf_path: PathBuf = steam_path.join("config").join("loginusers.vdf");
 
     let loginusers = vdf::load(&vdf_path).unwrap();
     let users: Vec<vdf::Entry> = loginusers
         .lookup("users")
-        .unwrap()
+        .ok_or("Failed to get local Steam users")?
         .as_table()
-        .unwrap()
+        .ok_or("Failed to convert local Steam users to table")?
         .values()
         .cloned()
         .collect();
@@ -119,11 +119,15 @@ fn get_recent_steam_user() -> String {
         };
         let is_most_recent = recent_entry.to::<bool>().unwrap();
         if is_most_recent {
-            steam_user = user.lookup("PersonaName").unwrap().as_str().unwrap();
+            steam_user = user
+                .lookup("PersonaName")
+                .ok_or("Failed to get Steam username")?
+                .as_str()
+                .ok_or("Failed to convert Steam username to string")?;
         }
     }
 
-    return steam_user.to_string();
+    return Ok(steam_user.to_string());
 }
 
 const THUMB_WIDTH: u32 = steamworks::sys::k_ScreenshotThumbWidth as u32;
