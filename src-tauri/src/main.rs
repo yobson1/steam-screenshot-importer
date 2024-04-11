@@ -355,9 +355,9 @@ async fn import_screenshots(file_paths: Vec<String>, app_id: u32, window: tauri:
 
         // Empty the cache
         info!("Emptying cache");
-        // remove_dir_all(&cache_dir)
-        // .and_then(|_| create_dir(&cache_dir))
-        // .unwrap();
+        remove_dir_all(&cache_dir)
+            .and_then(|_| create_dir(&cache_dir))
+            .unwrap();
     } else {
         warn!("Got no screenshots to import");
         return "No screenshots to import!".to_string();
