@@ -254,6 +254,26 @@ async fn import_screenshots(file_paths: Vec<String>, app_id: u32, window: tauri:
                 );
                 let new_width = (img.width() as f32 * scale_factor) as u32;
                 let new_height = (img.height() as f32 * scale_factor) as u32;
+
+                if new_width <= 0 || new_height <= 0 {
+                    warn!(
+                        "Image {}.{} is too large to be imported and cannot be downscaled correctly, it will be skipped",
+                        img_name, extension
+                    );
+
+                    window
+                        .emit(
+                            p,
+                            &format!(
+                                "Skipping {}.{} as it is too large to be imported",
+                                img_name, extension
+                            ),
+                        )
+                        .unwrap();
+
+                    continue;
+                }
+
                 img = img.resize_exact(new_width, new_height, FilterType::Lanczos3);
 
                 info!(
