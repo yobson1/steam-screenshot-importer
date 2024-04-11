@@ -70,9 +70,8 @@ unsafe fn steam_http_get(url: &str) -> String {
 }
 
 #[tauri::command]
-fn get_games() -> Vec<(u32, String, String)> {
-    // TODO: Handle error when steam can't be found
-    let mut steamdir: SteamDir = SteamDir::locate().unwrap();
+fn get_games() -> Result<Vec<(u32, String, String)>, String> {
+    let mut steamdir: SteamDir = SteamDir::locate().ok_or("Failed to locate Steam installation")?;
     let apps_hash: HashMap<u32, Option<SteamApp>> = steamdir.apps().clone();
     let apps: Vec<u32> = apps_hash.keys().cloned().collect();
     let steam_path: PathBuf = steamdir.path;
@@ -92,7 +91,7 @@ fn get_games() -> Vec<(u32, String, String)> {
         imgs.push((appid, b64_img, name.to_string()));
     }
 
-    return imgs;
+    return Ok(imgs);
 }
 
 #[tauri::command]

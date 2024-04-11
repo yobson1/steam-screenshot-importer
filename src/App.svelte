@@ -1,14 +1,19 @@
 <script>
-	import Header from "./Header.svelte";
-	import Footer from "./Footer.svelte";
-	import GameTile from "./GameTile.svelte";
-	import Settings from "./Settings.svelte";
-	import About from "./About.svelte";
-	import { Route } from "tinro";
-	import { invoke } from "@tauri-apps/api/tauri";
+	import Header from './Header.svelte';
+	import Footer from './Footer.svelte';
+	import GameTile from './GameTile.svelte';
+	import Settings from './Settings.svelte';
+	import About from './About.svelte';
+	import { Route } from 'tinro';
+	import { invoke } from '@tauri-apps/api/tauri';
+	import swal from 'sweetalert';
 
-	let get_games_prom = invoke("get_games");
-	let steam_user_prom = invoke("get_recent_steam_user");
+	let get_games_prom = invoke('get_games');
+	let steam_user_prom = invoke('get_recent_steam_user');
+
+	get_games_prom.catch((error) => {
+		swal('Error', error, 'error');
+	});
 </script>
 
 <Header />
@@ -32,8 +37,7 @@
 						<GameTile
 							appID={game[0]}
 							appName={game[2]}
-							imgSrc={(game[1] != "" &&
-								"data:image/jpeg;base64," + game[1]) ||
+							imgSrc={(game[1] != '' && 'data:image/jpeg;base64,' + game[1]) ||
 								`https://cdn.cloudflare.steamstatic.com/steam/apps/${game[0]}/library_600x900.jpg`}
 						/>
 					{/each}
@@ -67,7 +71,8 @@
 	:global(body) {
 		background-color: var(--background-light);
 		color: var(--content-light);
-		transition: background-color var(--transition-speed),
+		transition:
+			background-color var(--transition-speed),
 			color var(--transition-speed);
 		padding-top: 0;
 	}
