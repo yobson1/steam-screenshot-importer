@@ -29,6 +29,9 @@
 				let oldOverflow = document.body.style.overflow;
 				document.body.style.overflow = 'hidden';
 
+				// Scroll to the top
+				window.scrollTo(0, 0);
+
 				// Play sound
 				augh.loop = true;
 				augh.play();
