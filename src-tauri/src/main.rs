@@ -1,8 +1,3 @@
-#![cfg_attr(
-    all(not(debug_assertions), target_os = "windows"),
-    windows_subsystem = "windows"
-)]
-
 use directories::ProjectDirs;
 use image::imageops::{resize, FilterType};
 use image::io::Reader as ImageReader;
@@ -28,12 +23,11 @@ use steamworks::sys::SteamAPI_ISteamHTTP_GetHTTPResponseBodySize as http_get_res
 use steamworks::sys::SteamAPI_ISteamHTTP_ReleaseHTTPRequest as steam_http_release;
 use steamworks::sys::SteamAPI_ISteamHTTP_SendHTTPRequest as steam_http_send;
 use steamworks::sys::SteamAPI_ISteamScreenshots_AddScreenshotToLibrary as add_screenshot_to_library;
+use steamworks::sys::SteamAPI_IsSteamRunning as is_steam_running;
 use steamworks::sys::SteamAPI_SteamHTTP_v003 as get_steam_http;
 use steamworks::sys::SteamAPI_SteamScreenshots_v003 as get_steam_screenshots;
 use steamworks::Client;
 use steamy_vdf as vdf;
-use sysinfo::System;
-use winreg::{enums::HKEY_CURRENT_USER, RegKey};
 
 const LIB_CACHE_PATH: &str = "appcache\\librarycache\\";
 
@@ -69,6 +63,21 @@ unsafe fn steam_http_get(url: &str) -> String {
     String::from_utf8(buf).unwrap()
 }
 
+fn open_steam_section(section: &str) {
+    let open_command = if cfg!(target_os = "windows") {
+        "explorer"
+    } else if cfg!(target_os = "linux") {
+        "xdg-open"
+    } else {
+        panic!("Unsupported OS");
+    };
+
+    Command::new(open_command)
+        .arg(format!("steam://open/{}", section))
+        .spawn()
+        .unwrap();
+}
+
 #[tauri::command]
 fn get_games() -> Result<Vec<(u32, String, String)>, String> {
     let mut steamdir: SteamDir = SteamDir::locate().ok_or("Failed to locate Steam installation")?;
@@ -91,7 +100,7 @@ fn get_games() -> Result<Vec<(u32, String, String)>, String> {
         imgs.push((appid, b64_img, name.to_string()));
     }
 
-    return Ok(imgs);
+    Ok(imgs)
 }
 
 #[tauri::command]
@@ -113,21 +122,19 @@ fn get_recent_steam_user() -> Result<String, String> {
     let mut steam_user: &str = "";
     for i in 0..users.len() {
         let user = &users[i];
-        let recent_entry = match user.lookup("MostRecent") {
-            Some(entry) => entry,
-            None => continue,
-        };
-        let is_most_recent = recent_entry.to::<bool>().unwrap();
-        if is_most_recent {
-            steam_user = user
-                .lookup("PersonaName")
-                .ok_or("Failed to get Steam username")?
-                .as_str()
-                .ok_or("Failed to convert Steam username to string")?;
+        if let Some(recent_entry) = user.lookup("MostRecent") {
+            if recent_entry.to::<bool>().unwrap_or(false) {
+                steam_user = user
+                    .lookup("PersonaName")
+                    .ok_or("Failed to get Steam username")?
+                    .as_str()
+                    .ok_or("Failed to convert Steam username to string")?;
+                break;
+            }
         }
     }
 
-    return Ok(steam_user.to_string());
+    Ok(steam_user.to_string())
 }
 
 const THUMB_WIDTH: u32 = steamworks::sys::k_ScreenshotThumbWidth as u32;
@@ -147,52 +154,43 @@ async fn import_screenshots(file_paths: Vec<String>, app_id: u32, window: tauri:
         let cache_dir = PROJECT_DIRS.cache_dir();
 
         // Check if steam is running
-        let mut s = System::new();
-        s.refresh_processes();
-        let processes = s.processes_by_exact_name("steam.exe");
-        if processes.count() == 0 {
+        let steam_running = unsafe { is_steam_running() };
+
+        let (client, single);
+        if !steam_running {
             warn!("Steam is not running, attempting to start it automatically");
             // Open steam
-            Command::new("explorer")
-                .arg(format!("steam://open/main"))
-                .spawn()
-                .unwrap();
+            open_steam_section("main");
 
             // Wait for steam to start with a timeout of 20s
             let now = Instant::now();
             loop {
-                s.refresh_processes();
-                let processes = s.processes_by_exact_name("steam.exe");
-                if processes.count() > 0 {
-                    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-                    let active_process = hkcu
-                        .open_subkey("SOFTWARE\\Valve\\Steam\\ActiveProcess")
-                        .unwrap();
-                    let active_user: u32 = active_process.get_value("ActiveUser").unwrap();
-
-                    if active_user != 0 {
-                        info!("Steam has started successfully");
-                        break;
+                // Attempt to initialize steamworks
+                (client, single) = match Client::init_app(app_id) {
+                    Ok(client) => client,
+                    Err(_) => {
+                        if now.elapsed().as_secs() > 20 {
+                            error!("Steam failed to start, aborting");
+                            return "Steam is not running and failed to automatically start"
+                                .to_string();
+                        }
+                        thread::sleep(Duration::from_millis(500));
+                        continue;
                     }
-                }
-                if now.elapsed().as_secs() > 20 {
-                    error!("Steam failed to start, aborting");
-                    return "Steam is not running and failed to automatically start".to_string();
-                }
-                thread::sleep(Duration::from_millis(500));
-            }
-        }
+                };
 
-        // Initialize steamworks - we don't actually need to use the client object since
-        // it doesn't formally implement the ISteamScreenshots interface and we're using
-        // the raw bindings for that later.
-        let (client, single) = match Client::init_app(app_id) {
-            Ok(client) => client,
-            Err(e) => {
-                error!("{}", e);
-                return "Failed to initialize steamworks!\nMake sure steam is open and you own the game you're attempting to import for.".to_string();
+                info!("Steam has started successfully");
+                break;
             }
-        };
+        } else {
+            (client, single) = match Client::init_app(app_id) {
+                Ok(client) => client,
+                Err(e) => {
+                    error!("{}", e);
+                    return "Failed to initialize steamworks!\nMake sure steam is open and you own the game you're attempting to import for.".to_string();
+                }
+            };
+        }
 
         let p = "screenshotImportProgress";
         window.emit(p, "Import started").unwrap();
@@ -351,10 +349,7 @@ async fn import_screenshots(file_paths: Vec<String>, app_id: u32, window: tauri:
         );
 
         // Open the steam screenshots window for upload
-        Command::new("explorer")
-            .arg(format!("steam://open/screenshots/{}", app_id))
-            .spawn()
-            .unwrap();
+        open_steam_section(format!("screenshots/{}", app_id).as_str());
 
         // Empty the cache
         info!("Emptying cache");
@@ -366,7 +361,7 @@ async fn import_screenshots(file_paths: Vec<String>, app_id: u32, window: tauri:
         return "No screenshots to import!".to_string();
     }
 
-    return String::default();
+    String::default()
 }
 
 fn main() {
