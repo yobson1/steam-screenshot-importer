@@ -27,6 +27,7 @@ directories = "4.0.1"
 log = "0.4.17"
 simple_logger = "2.1.0"
 lazy_static = "1.4"
+rayon = "1.10"
 
 [features]
 # by default Tauri runs in production mode

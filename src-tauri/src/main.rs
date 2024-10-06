@@ -4,6 +4,7 @@ use image::io::Reader as ImageReader;
 use image::ImageOutputFormat;
 use lazy_static::lazy_static;
 use log::{error, info, warn};
+use rayon::prelude::*;
 use simple_logger::SimpleLogger;
 use std::collections::HashMap;
 use std::ffi::CString;
@@ -11,6 +12,7 @@ use std::fs::{create_dir, create_dir_all, read, remove_dir_all, File};
 use std::io::BufWriter;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
 use steamlocate::{SteamApp, SteamDir};
@@ -30,6 +32,8 @@ use steamworks::Client;
 use steamy_vdf as vdf;
 
 const LIB_CACHE_PATH: &str = "appcache\\librarycache\\";
+const PROGRESS_EVENT: &str = "screenshotImportProgress";
+const ERROR_EVENT: &str = "screenshotImportError";
 
 lazy_static! {
     static ref PROJECT_DIRS: ProjectDirs = ProjectDirs::from("com", "yob", "ssi").unwrap();
@@ -150,218 +154,237 @@ async fn import_screenshots(file_paths: Vec<String>, app_id: u32, window: tauri:
     );
 
     let num_of_files = file_paths.len();
-    if num_of_files > 0 {
-        let cache_dir = PROJECT_DIRS.cache_dir();
-
-        // Check if steam is running
-        let steam_running = unsafe { is_steam_running() };
-
-        let (client, single);
-        if !steam_running {
-            warn!("Steam is not running, attempting to start it automatically");
-            // Open steam
-            open_steam_section("main");
-
-            // Wait for steam to start with a timeout of 20s
-            let now = Instant::now();
-            loop {
-                // Attempt to initialize steamworks
-                (client, single) = match Client::init_app(app_id) {
-                    Ok(client) => client,
-                    Err(_) => {
-                        if now.elapsed().as_secs() > 20 {
-                            error!("Steam failed to start, aborting");
-                            return "Steam is not running and failed to automatically start"
-                                .to_string();
-                        }
-                        thread::sleep(Duration::from_millis(500));
-                        continue;
-                    }
-                };
-
-                info!("Steam has started successfully");
-                break;
-            }
-        } else {
-            (client, single) = match Client::init_app(app_id) {
-                Ok(client) => client,
-                Err(e) => {
-                    error!("{}", e);
-                    return "Failed to initialize steamworks!\nMake sure steam is open and you own the game you're attempting to import for.".to_string();
-                }
-            };
-        }
-
-        let p = "screenshotImportProgress";
-        window.emit(p, "Import started").unwrap();
-
-        for file_path in file_paths {
-            let img_path = Path::new(&file_path);
-            let img_name = img_path.file_stem().unwrap().to_str().unwrap();
-            let extension = img_path.extension().unwrap().to_str().unwrap();
-
-            window
-                .emit(p, &format!("Loading {}.{}", img_name, extension))
-                .unwrap();
-
-            let new_file_name = format!("{}_{}.jpg", img_name, app_id);
-            let new_thumbnail_name = format!("{}_{}_thumb.jpg", img_name, app_id);
-
-            info!("New file name: {}", new_file_name);
-
-            // Load original image
-            info!("Loading image: {}", img_path.display());
-            let mut img = match ImageReader::open(file_path.as_str()).unwrap().decode() {
-                Ok(img) => img,
-                Err(e) => {
-                    window
-                        .emit(
-                            "screenshotImportError",
-                            &format!("{}.{}\n{}", img_name, extension, e),
-                        )
-                        .unwrap();
-                    error!("{}", e);
-                    // Pause for a moment before continuing to give the user a chance to see the error
-                    thread::sleep(Duration::from_millis(2500));
-                    continue;
-                }
-            };
-
-            // Convert to jpg or downscale if needed
-            let new_img_path = cache_dir.join(&new_file_name);
-
-            if img.width() > MAX_SIDE
-                || img.height() > MAX_SIDE
-                || img.width() * img.height() > MAX_RESOLUTION
-            {
-                warn!(
-                    "Image {}.{} is too large to be imported, it will be downscaled",
-                    img_name, extension
-                );
-
-                window
-                    .emit(
-                        p,
-                        &format!(
-                            "Resizing {}.{} to fit within steam's limits",
-                            img_name, extension
-                        ),
-                    )
-                    .unwrap();
-
-                let scale_factor = f32::min(
-                    MAX_SIDE as f32 / f32::max(img.width() as f32, img.height() as f32),
-                    MAX_RESOLUTION as f32 / (img.width() * img.height()) as f32,
-                );
-                let new_width = (img.width() as f32 * scale_factor) as u32;
-                let new_height = (img.height() as f32 * scale_factor) as u32;
-
-                if new_width <= 0 || new_height <= 0 {
-                    warn!(
-                        "Image {}.{} is too large to be imported and cannot be downscaled correctly, it will be skipped",
-                        img_name, extension
-                    );
-
-                    window
-                        .emit(
-                            p,
-                            &format!(
-                                "Skipping {}.{} as it is too large to be imported",
-                                img_name, extension
-                            ),
-                        )
-                        .unwrap();
-
-                    continue;
-                }
-
-                img = img.resize_exact(new_width, new_height, FilterType::Lanczos3);
-
-                info!(
-                    "{}.{} new size: {}x{}",
-                    img_name, extension, new_width, new_height
-                );
-            }
-
-            if extension != "jpg" && extension != "jpeg" {
-                info!("Converting image {}.{} to jpg", img_name, extension);
-                window
-                    .emit(
-                        p,
-                        &format!("Converting image {}.{} to jpeg", img_name, extension),
-                    )
-                    .unwrap();
-                let file = File::create(&new_img_path).unwrap();
-                let mut writer = BufWriter::new(file);
-                img.write_to(&mut writer, ImageOutputFormat::Jpeg(95))
-                    .unwrap(); // TODO: Make the quality configurable
-            } else {
-                info!("Copying image {}.{}", img_name, extension);
-                img.save(&new_img_path).unwrap();
-            }
-
-            // Create thumbnail image
-            info!("Resizing image {}.{} for thumbnail", img_name, extension);
-            window
-                .emit(
-                    p,
-                    &format!("Resizing image {}.{} for thumbnail", img_name, extension),
-                )
-                .unwrap();
-
-            let thumb_img_path = cache_dir.join(&new_thumbnail_name);
-
-            let thumb_height = (THUMB_WIDTH * img.height()) / img.width();
-            let thumb_img = resize(&img, THUMB_WIDTH, thumb_height, FilterType::Lanczos3);
-            let file = File::create(&thumb_img_path).unwrap();
-            let mut writer = BufWriter::new(&file);
-            thumb_img
-                .write_to(&mut writer, ImageOutputFormat::Jpeg(95))
-                .unwrap();
-
-            // Import screenshot
-            info!(
-                "Importing screenshot {} {}",
-                new_img_path.display(),
-                thumb_img_path.display()
-            );
-            unsafe {
-                let screenshots = get_steam_screenshots();
-                let screenshot_path = CString::new(&*new_img_path.to_string_lossy()).unwrap();
-                let thumbnail_path = CString::new(&*thumb_img_path.to_string_lossy()).unwrap();
-                add_screenshot_to_library(
-                    screenshots,
-                    screenshot_path.as_ptr(),
-                    thumbnail_path.as_ptr(),
-                    img.width().try_into().unwrap(),
-                    img.height().try_into().unwrap(),
-                );
-                single.run_callbacks();
-            }
-            info!("Import of {}.{} complete", img_name, extension);
-        }
-
-        drop(client);
-
-        info!(
-            "Import of {} images complete, opening steam screenshots window",
-            num_of_files
-        );
-
-        // Open the steam screenshots window for upload
-        open_steam_section(format!("screenshots/{}", app_id).as_str());
-
-        // Empty the cache
-        info!("Emptying cache");
-        remove_dir_all(&cache_dir)
-            .and_then(|_| create_dir(&cache_dir))
-            .unwrap();
-    } else {
+    if num_of_files == 0 {
         warn!("Got no screenshots to import");
         return "No screenshots to import!".to_string();
     }
 
+    let cache_dir = PROJECT_DIRS.cache_dir();
+
+    // Check if steam is running and initialize client
+    let (client, single) = initialize_steam(app_id).unwrap();
+
+    window.emit(PROGRESS_EVENT, "Import started").unwrap();
+
+    // Wrap shared resources in Arc for thread-safe sharing
+    let window = Arc::new(window);
+    let cache_dir = Arc::new(cache_dir);
+    let single = Arc::new(std::sync::Mutex::new(single));
+
+    // Process screenshots in parallel
+    file_paths.par_iter().for_each(|file_path| {
+        let window = Arc::clone(&window);
+        let cache_dir = Arc::clone(&cache_dir);
+        let single = Arc::clone(&single);
+
+        import_single_screenshot(file_path, app_id, &window, &cache_dir, &single);
+    });
+
+    drop(client);
+
+    info!(
+        "Import of {} images complete, opening steam screenshots window",
+        num_of_files
+    );
+
+    // Open the steam screenshots window for upload
+    open_steam_section(&format!("screenshots/{}", app_id));
+
+    // Empty the cache
+    info!("Emptying cache");
+    remove_dir_all(*cache_dir)
+        .and_then(|_| create_dir(*cache_dir))
+        .unwrap();
+
     String::default()
+}
+
+fn initialize_steam(app_id: u32) -> Result<(Client, steamworks::SingleClient), String> {
+    let steam_running = unsafe { is_steam_running() };
+
+    if !steam_running {
+        warn!("Steam is not running, attempting to start it automatically");
+        open_steam_section("main");
+
+        // Wait for steam to start with a timeout of 20s
+        let now = Instant::now();
+        loop {
+            match Client::init_app(app_id) {
+                Ok(client) => {
+                    info!("Steam has started successfully");
+                    return Ok(client);
+                }
+                Err(_) => {
+                    if now.elapsed().as_secs() > 20 {
+                        error!("Steam failed to start, aborting");
+                        return Err(
+                            "Steam is not running and failed to automatically start".to_string()
+                        );
+                    }
+                    thread::sleep(Duration::from_millis(500));
+                }
+            }
+        }
+    } else {
+        match Client::init_app(app_id) {
+            Ok(client) => Ok(client),
+            Err(e) => {
+                error!("{}", e);
+                Err("Failed to initialize steamworks!\nMake sure steam is open and you own the game you're attempting to import for.".to_string())
+            }
+        }
+    }
+}
+
+fn import_single_screenshot(
+    file_path: &str,
+    app_id: u32,
+    window: &tauri::Window,
+    cache_dir: &Path,
+    single: &std::sync::Mutex<steamworks::SingleClient>,
+) {
+    let img_path = Path::new(file_path);
+    let img_name = img_path.file_stem().unwrap().to_str().unwrap();
+    let extension = img_path.extension().unwrap().to_str().unwrap();
+
+    window
+        .emit(
+            PROGRESS_EVENT,
+            &format!("Loading {}.{}", img_name, extension),
+        )
+        .unwrap();
+
+    let new_file_name = format!("{}_{}.jpg", img_name, app_id);
+    let new_thumbnail_name = format!("{}_{}_thumb.jpg", img_name, app_id);
+
+    info!("New file name: {}", new_file_name);
+
+    // Load original image
+    info!("Loading image: {}", img_path.display());
+    let mut img = match ImageReader::open(file_path).unwrap().decode() {
+        Ok(img) => img,
+        Err(e) => {
+            window
+                .emit(ERROR_EVENT, &format!("{}.{}\n{}", img_name, extension, e))
+                .unwrap();
+            error!("{}", e);
+            thread::sleep(Duration::from_millis(2500));
+            return;
+        }
+    };
+
+    // Convert to jpg or downscale if needed
+    let new_img_path = cache_dir.join(&new_file_name);
+
+    if img.width() > MAX_SIDE
+        || img.height() > MAX_SIDE
+        || img.width() * img.height() > MAX_RESOLUTION
+    {
+        warn!(
+            "Image {}.{} is too large to be imported, it will be downscaled",
+            img_name, extension
+        );
+
+        window
+            .emit(
+                PROGRESS_EVENT,
+                &format!(
+                    "Resizing {}.{} to fit within steam's limits",
+                    img_name, extension
+                ),
+            )
+            .unwrap();
+
+        let scale_factor = f32::min(
+            MAX_SIDE as f32 / f32::max(img.width() as f32, img.height() as f32),
+            MAX_RESOLUTION as f32 / (img.width() * img.height()) as f32,
+        );
+        let new_width = (img.width() as f32 * scale_factor) as u32;
+        let new_height = (img.height() as f32 * scale_factor) as u32;
+
+        if new_width <= 0 || new_height <= 0 {
+            warn!(
+                "Image {}.{} is too large to be imported and cannot be downscaled correctly, it will be skipped",
+                img_name, extension
+            );
+
+            window
+                .emit(
+                    PROGRESS_EVENT,
+                    &format!(
+                        "Skipping {}.{} as it is too large to be imported",
+                        img_name, extension
+                    ),
+                )
+                .unwrap();
+
+            return;
+        }
+
+        img = img.resize_exact(new_width, new_height, FilterType::Lanczos3);
+
+        info!(
+            "{}.{} new size: {}x{}",
+            img_name, extension, new_width, new_height
+        );
+    }
+
+    if extension != "jpg" && extension != "jpeg" {
+        info!("Converting image {}.{} to jpg", img_name, extension);
+        window
+            .emit(
+                PROGRESS_EVENT,
+                &format!("Converting image {}.{} to jpeg", img_name, extension),
+            )
+            .unwrap();
+        let file = File::create(&new_img_path).unwrap();
+        let mut writer = BufWriter::new(file);
+        img.write_to(&mut writer, ImageOutputFormat::Jpeg(95))
+            .unwrap(); // TODO: Make the quality configurable
+    } else {
+        info!("Copying image {}.{}", img_name, extension);
+        img.save(&new_img_path).unwrap();
+    }
+
+    // Create thumbnail image
+    info!("Resizing image {}.{} for thumbnail", img_name, extension);
+    window
+        .emit(
+            PROGRESS_EVENT,
+            &format!("Resizing image {}.{} for thumbnail", img_name, extension),
+        )
+        .unwrap();
+
+    let thumb_img_path = cache_dir.join(&new_thumbnail_name);
+
+    let thumb_height = (THUMB_WIDTH * img.height()) / img.width();
+    let thumb_img = resize(&img, THUMB_WIDTH, thumb_height, FilterType::Lanczos3);
+    let file = File::create(&thumb_img_path).unwrap();
+    let mut writer = BufWriter::new(&file);
+    thumb_img
+        .write_to(&mut writer, ImageOutputFormat::Jpeg(95))
+        .unwrap();
+
+    // Import screenshot
+    info!(
+        "Importing screenshot {} {}",
+        new_img_path.display(),
+        thumb_img_path.display()
+    );
+    unsafe {
+        let screenshots = get_steam_screenshots();
+        let screenshot_path = CString::new(&*new_img_path.to_string_lossy()).unwrap();
+        let thumbnail_path = CString::new(&*thumb_img_path.to_string_lossy()).unwrap();
+        add_screenshot_to_library(
+            screenshots,
+            screenshot_path.as_ptr(),
+            thumbnail_path.as_ptr(),
+            img.width().try_into().unwrap(),
+            img.height().try_into().unwrap(),
+        );
+        single.lock().unwrap().run_callbacks();
+    }
+    info!("Import of {}.{} complete", img_name, extension);
 }
 
 fn main() {
