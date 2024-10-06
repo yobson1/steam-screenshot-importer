@@ -8,15 +8,30 @@ function sendScreenshots(paths: string[] | string, appID: number) {
 	return invoke('import_screenshots', { filePaths: paths, appId: appID });
 }
 
+let progress = 0;
+
 listen('screenshotImportProgress', (event) => {
+	progress = typeof event.payload === 'number' ? event.payload : progress;
+
 	swal({
 		title: 'Importing Screenshots',
-		text: `${event.payload}`,
+		text: `${Math.floor(progress)}%`,
 		icon: 'info',
 		closeOnClickOutside: false,
 		closeOnEsc: false,
-		buttons: [false, false]
+		buttons: [false, false],
+		content: {
+			element: 'progress',
+			attributes: {
+				value: progress,
+				max: 100
+			}
+		}
 	});
+
+	if (progress >= 100) {
+		progress = 0;
+	}
 });
 
 listen('screenshotImportError', (event) => {

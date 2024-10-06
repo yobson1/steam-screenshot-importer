@@ -1,3 +1,4 @@
+use atomic_float::AtomicF32;
 use directories::ProjectDirs;
 use image::imageops::{resize, FilterType};
 use image::io::Reader as ImageReader;
@@ -12,7 +13,7 @@ use std::fs::{create_dir, create_dir_all, read, remove_dir_all, File};
 use std::io::BufWriter;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::Arc;
+use std::sync::{atomic::Ordering, Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 use steamlocate::{SteamApp, SteamDir};
@@ -164,12 +165,15 @@ async fn import_screenshots(file_paths: Vec<String>, app_id: u32, window: tauri:
     // Check if steam is running and initialize client
     let (client, single) = initialize_steam(app_id).unwrap();
 
-    window.emit(PROGRESS_EVENT, "Import started").unwrap();
+    // window.emit(PROGRESS_EVENT, "Import started").unwrap();
 
     // Wrap shared resources in Arc for thread-safe sharing
     let window = Arc::new(window);
     let cache_dir = Arc::new(cache_dir);
-    let single = Arc::new(std::sync::Mutex::new(single));
+    let single = Arc::new(Mutex::new(single));
+
+    // Progress bar
+    let screenshots_completed = AtomicF32::new(0.0);
 
     // Process screenshots in parallel
     file_paths.par_iter().for_each(|file_path| {
@@ -177,7 +181,15 @@ async fn import_screenshots(file_paths: Vec<String>, app_id: u32, window: tauri:
         let cache_dir = Arc::clone(&cache_dir);
         let single = Arc::clone(&single);
 
-        import_single_screenshot(file_path, app_id, &window, &cache_dir, &single);
+        import_single_screenshot(
+            file_path,
+            app_id,
+            &window,
+            &cache_dir,
+            &single,
+            &screenshots_completed,
+            num_of_files,
+        );
     });
 
     drop(client);
@@ -226,18 +238,20 @@ fn import_single_screenshot(
     app_id: u32,
     window: &tauri::Window,
     cache_dir: &Path,
-    single: &std::sync::Mutex<steamworks::SingleClient>,
+    single: &Mutex<steamworks::SingleClient>,
+    screenshots_completed: &AtomicF32,
+    total_screenshots: usize,
 ) {
     let img_path = Path::new(file_path);
     let img_name = img_path.file_stem().unwrap().to_str().unwrap();
     let extension = img_path.extension().unwrap().to_str().unwrap();
 
-    window
-        .emit(
-            PROGRESS_EVENT,
-            &format!("Loading {}.{}", img_name, extension),
-        )
-        .unwrap();
+    // window
+    //     .emit(
+    //         PROGRESS_EVENT,
+    //         &format!("Loading {}.{}", img_name, extension),
+    //     )
+    //     .unwrap();
 
     let new_file_name = format!("{}_{}.jpg", img_name, app_id);
     let new_thumbnail_name = format!("{}_{}_thumb.jpg", img_name, app_id);
@@ -270,15 +284,15 @@ fn import_single_screenshot(
             img_name, extension
         );
 
-        window
-            .emit(
-                PROGRESS_EVENT,
-                &format!(
-                    "Resizing {}.{} to fit within steam's limits",
-                    img_name, extension
-                ),
-            )
-            .unwrap();
+        // window
+        //     .emit(
+        //         PROGRESS_EVENT,
+        //         &format!(
+        //             "Resizing {}.{} to fit within steam's limits",
+        //             img_name, extension
+        //         ),
+        //     )
+        //     .unwrap();
 
         let scale_factor = f32::min(
             MAX_SIDE as f32 / f32::max(img.width() as f32, img.height() as f32),
@@ -293,15 +307,15 @@ fn import_single_screenshot(
                 img_name, extension
             );
 
-            window
-                .emit(
-                    PROGRESS_EVENT,
-                    &format!(
-                        "Skipping {}.{} as it is too large to be imported",
-                        img_name, extension
-                    ),
-                )
-                .unwrap();
+            // window
+            //     .emit(
+            //         PROGRESS_EVENT,
+            //         &format!(
+            //             "Skipping {}.{} as it is too large to be imported",
+            //             img_name, extension
+            //         ),
+            //     )
+            //     .unwrap();
 
             return;
         }
@@ -316,12 +330,12 @@ fn import_single_screenshot(
 
     if extension != "jpg" && extension != "jpeg" {
         info!("Converting image {}.{} to jpg", img_name, extension);
-        window
-            .emit(
-                PROGRESS_EVENT,
-                &format!("Converting image {}.{} to jpeg", img_name, extension),
-            )
-            .unwrap();
+        // window
+        //     .emit(
+        //         PROGRESS_EVENT,
+        //         &format!("Converting image {}.{} to jpeg", img_name, extension),
+        //     )
+        //     .unwrap();
         let file = File::create(&new_img_path).unwrap();
         let mut writer = BufWriter::new(file);
         img.write_to(&mut writer, ImageOutputFormat::Jpeg(95))
@@ -331,14 +345,16 @@ fn import_single_screenshot(
         img.save(&new_img_path).unwrap();
     }
 
+    update_progress(window, screenshots_completed, total_screenshots, 0.3);
+
     // Create thumbnail image
     info!("Resizing image {}.{} for thumbnail", img_name, extension);
-    window
-        .emit(
-            PROGRESS_EVENT,
-            &format!("Resizing image {}.{} for thumbnail", img_name, extension),
-        )
-        .unwrap();
+    // window
+    //     .emit(
+    //         PROGRESS_EVENT,
+    //         &format!("Resizing image {}.{} for thumbnail", img_name, extension),
+    //     )
+    //     .unwrap();
 
     let thumb_img_path = cache_dir.join(&new_thumbnail_name);
 
@@ -349,6 +365,8 @@ fn import_single_screenshot(
     thumb_img
         .write_to(&mut writer, ImageOutputFormat::Jpeg(95))
         .unwrap();
+
+    update_progress(window, screenshots_completed, total_screenshots, 0.4);
 
     // Import screenshot
     info!(
@@ -370,6 +388,19 @@ fn import_single_screenshot(
         single.lock().unwrap().run_callbacks();
     }
     info!("Import of {}.{} complete", img_name, extension);
+
+    update_progress(window, screenshots_completed, total_screenshots, 0.3);
+}
+
+fn update_progress(
+    window: &tauri::Window,
+    screenshots_completed: &AtomicF32,
+    total_screenshots: usize,
+    step_progress: f32,
+) {
+    let completed = screenshots_completed.fetch_add(step_progress, Ordering::SeqCst);
+    let progress = ((completed + step_progress) / total_screenshots as f32) * 100.0;
+    window.emit(PROGRESS_EVENT, progress).unwrap();
 }
 
 fn main() {
