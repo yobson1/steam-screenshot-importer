@@ -28,7 +28,7 @@ use steamworks::sys::SteamAPI_ISteamScreenshots_AddScreenshotToLibrary as add_sc
 use steamworks::sys::SteamAPI_IsSteamRunning as is_steam_running;
 use steamworks::sys::SteamAPI_SteamHTTP_v003 as get_steam_http;
 use steamworks::sys::SteamAPI_SteamScreenshots_v003 as get_steam_screenshots;
-use steamworks::Client;
+use steamworks::{Client, SingleClient};
 use steamy_vdf as vdf;
 
 const LIB_CACHE_PATH: &str = "appcache\\librarycache\\";
@@ -199,41 +199,26 @@ async fn import_screenshots(file_paths: Vec<String>, app_id: u32, window: tauri:
     String::default()
 }
 
-fn initialize_steam(app_id: u32) -> Result<(Client, steamworks::SingleClient), String> {
-    let steam_running = unsafe { is_steam_running() };
-
-    if !steam_running {
-        warn!("Steam is not running, attempting to start it automatically");
-        open_steam_section("main");
-
-        // Wait for steam to start with a timeout of 20s
-        let now = Instant::now();
-        loop {
-            match Client::init_app(app_id) {
-                Ok(client) => {
-                    info!("Steam has started successfully");
-                    return Ok(client);
-                }
-                Err(_) => {
-                    if now.elapsed().as_secs() > 20 {
-                        error!("Steam failed to start, aborting");
-                        return Err(
-                            "Steam is not running and failed to automatically start".to_string()
-                        );
-                    }
-                    thread::sleep(Duration::from_millis(500));
-                }
-            }
-        }
+fn initialize_steam(app_id: u32) -> Result<(Client, SingleClient), String> {
+    if unsafe { is_steam_running() } {
+        Client::init_app(app_id).map_err(|_| "Failed to initialize steamworks!\nMake sure steam is open and you own the game you're attempting to import for.".to_string())
     } else {
-        match Client::init_app(app_id) {
-            Ok(client) => Ok(client),
-            Err(e) => {
-                error!("{}", e);
-                Err("Failed to initialize steamworks!\nMake sure steam is open and you own the game you're attempting to import for.".to_string())
-            }
-        }
+        open_steam_section("main");
+        wait_for_steam(app_id)
     }
+}
+
+fn wait_for_steam(app_id: u32) -> Result<(Client, SingleClient), String> {
+    let start = Instant::now();
+    while start.elapsed().as_secs() < 20 {
+        if let Ok(client) = Client::init_app(app_id) {
+            info!("Steam started successfully");
+            return Ok(client);
+        }
+        thread::sleep(Duration::from_millis(500));
+    }
+
+    Err("Steam is not running and failed to automatically start".to_string())
 }
 
 fn import_single_screenshot(
