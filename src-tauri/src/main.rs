@@ -1,8 +1,8 @@
 use atomic_float::AtomicF32;
 use directories::ProjectDirs;
+use image::codecs::jpeg::JpegEncoder;
 use image::imageops::{resize, FilterType};
-use image::io::Reader as ImageReader;
-use image::ImageOutputFormat;
+use image::ImageReader;
 use lazy_static::lazy_static;
 use log::{error, info, warn};
 use rayon::prelude::*;
@@ -80,6 +80,8 @@ fn open_steam_section(section: &str) {
     Command::new(open_command)
         .arg(format!("steam://open/{}", section))
         .spawn()
+        .unwrap()
+        .wait()
         .unwrap();
 }
 
@@ -95,10 +97,7 @@ fn get_games() -> Result<Vec<(u32, String, String)>, String> {
         let img_path: PathBuf = steam_path
             .join(LIB_CACHE_PATH)
             .join(format!("{}_library_600x900.jpg", appid));
-        let img: Vec<u8> = match read(&img_path) {
-            Ok(img) => img,
-            Err(_) => vec![],
-        };
+        let img: Vec<u8> = read(&img_path).unwrap_or_default();
         let b64_img: String = base64::encode(img);
         let app = apps_hash.get(&appid).unwrap().as_ref().unwrap();
         let name = app.name.as_ref().unwrap();
@@ -125,8 +124,7 @@ fn get_recent_steam_user() -> Result<String, String> {
         .collect();
 
     let mut steam_user: &str = "";
-    for i in 0..users.len() {
-        let user = &users[i];
+    for user in &users {
         if let Some(recent_entry) = user.lookup("MostRecent") {
             if recent_entry.to::<bool>().unwrap_or(false) {
                 steam_user = user
@@ -301,7 +299,7 @@ fn import_single_screenshot(
         let new_width = (img.width() as f32 * scale_factor) as u32;
         let new_height = (img.height() as f32 * scale_factor) as u32;
 
-        if new_width <= 0 || new_height <= 0 {
+        if new_width == 0 || new_height == 0 {
             warn!(
                 "Image {}.{} is too large to be imported and cannot be downscaled correctly, it will be skipped",
                 img_name, extension
@@ -337,9 +335,9 @@ fn import_single_screenshot(
         //     )
         //     .unwrap();
         let file = File::create(&new_img_path).unwrap();
-        let mut writer = BufWriter::new(file);
-        img.write_to(&mut writer, ImageOutputFormat::Jpeg(95))
-            .unwrap(); // TODO: Make the quality configurable
+        let writer = BufWriter::new(file);
+        let mut encoder = JpegEncoder::new_with_quality(writer, 95); // TODO: Make the quality configurable
+        encoder.encode_image(&img).unwrap();
     } else {
         info!("Copying image {}.{}", img_name, extension);
         img.save(&new_img_path).unwrap();
@@ -361,10 +359,9 @@ fn import_single_screenshot(
     let thumb_height = (THUMB_WIDTH * img.height()) / img.width();
     let thumb_img = resize(&img, THUMB_WIDTH, thumb_height, FilterType::Lanczos3);
     let file = File::create(&thumb_img_path).unwrap();
-    let mut writer = BufWriter::new(&file);
-    thumb_img
-        .write_to(&mut writer, ImageOutputFormat::Jpeg(95))
-        .unwrap();
+    let writer = BufWriter::new(&file);
+    let mut encoder = JpegEncoder::new_with_quality(writer, 95);
+    encoder.encode_image(&thumb_img).unwrap();
 
     update_progress(window, screenshots_completed, total_screenshots, 0.4);
 
@@ -411,7 +408,7 @@ fn main() {
 
     let cache_dir = PROJECT_DIRS.cache_dir();
     info!("Creating cache directory: {}", cache_dir.display());
-    create_dir_all(&cache_dir).unwrap();
+    create_dir_all(cache_dir).unwrap();
 
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
