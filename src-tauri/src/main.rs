@@ -223,23 +223,11 @@ struct ImportOptions {
 }
 
 struct ImportContext<R: tauri::Runtime> {
-    window: Arc<tauri::Window<R>>,
-    cache_dir: Arc<PathBuf>,
-    client: Arc<Mutex<steamworks::Client>>,
-    screenshots_completed: Arc<AtomicF32>,
+    window: tauri::Window<R>,
+    cache_dir: PathBuf,
+    client: Mutex<steamworks::Client>,
+    screenshots_completed: AtomicF32,
     total_screenshots: usize,
-}
-
-impl<R: tauri::Runtime> Clone for ImportContext<R> {
-    fn clone(&self) -> Self {
-        Self {
-            window: Arc::clone(&self.window),
-            cache_dir: Arc::clone(&self.cache_dir),
-            client: Arc::clone(&self.client),
-            screenshots_completed: Arc::clone(&self.screenshots_completed),
-            total_screenshots: self.total_screenshots,
-        }
-    }
 }
 
 fn parse_filter_type(s: &str) -> FilterType {
@@ -281,13 +269,13 @@ async fn import_screenshots<R: tauri::Runtime>(
     // Check if steam is running and initialize client
     let client = initialize_steam(app_id).unwrap();
 
-    let ctx = ImportContext {
-        window: Arc::new(window),
-        cache_dir: Arc::new(PROJECT_DIRS.cache_dir().to_path_buf()),
-        client: Arc::new(Mutex::new(client)),
-        screenshots_completed: Arc::new(AtomicF32::new(0.0)),
+    let ctx = Arc::new(ImportContext {
+        window,
+        cache_dir: PROJECT_DIRS.cache_dir().to_path_buf(),
+        client: Mutex::new(client),
+        screenshots_completed: AtomicF32::new(0.0),
         total_screenshots: num_of_files,
-    };
+    });
 
     // Process screenshots in parallel
     file_paths.par_iter().for_each(|file_path| {
@@ -304,8 +292,8 @@ async fn import_screenshots<R: tauri::Runtime>(
     open_steam_section(&format!("screenshots/{}", app_id));
 
     info!("Emptying cache");
-    remove_dir_all(&*ctx.cache_dir)
-        .and_then(|_| create_dir(&*ctx.cache_dir))
+    remove_dir_all(&ctx.cache_dir)
+        .and_then(|_| create_dir(&ctx.cache_dir))
         .unwrap();
 
     drop(ctx);
