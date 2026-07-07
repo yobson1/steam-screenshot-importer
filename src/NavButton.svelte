@@ -1,15 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import type { MenuButton } from './types';
 
-	let {
-		name,
-		href,
-		src,
-		rotate,
-		onclick = () => {}
-	} = $props();
+	let { name, href, src, rotate, onclick = () => {} }: MenuButton = $props();
 
-	let btn = $state();
+	let btn: HTMLButtonElement;
 	onMount(() => {
 		btn.onclick = onclick;
 	});

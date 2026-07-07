@@ -1,24 +1,25 @@
-<script>
+<script lang="ts">
 	import Header from './Header.svelte';
 	import Footer from './Footer.svelte';
 	import GameTile from './GameTile.svelte';
 	import Settings from './Settings.svelte';
 	import About from './About.svelte';
-	import { Route } from 'tinro';
+	import { Route as TinroRoute } from 'tinro';
+	import type { Component, Snippet } from 'svelte';
 	import { invoke } from '@tauri-apps/api/core';
 	import Swal from 'sweetalert2';
 
-	let get_games_prom = invoke('get_games');
-	let steam_user_prom = invoke('get_recent_steam_user');
+	const Route = TinroRoute as unknown as Component<{ path?: string; children?: Snippet }>;
+
+	let get_games_prom = invoke<[number, string, string][]>('get_games');
+	let steam_user_prom = invoke<string>('get_recent_steam_user');
 
 	get_games_prom.catch((error) => {
 		Swal.fire('Error', error, 'error');
 	});
 
-	function getSteamLibraryImage(appID) {
-		return invoke('get_library_image', {
-			appId: appID
-		});
+	function getSteamLibraryImage(appID: number) {
+		return invoke<string | null>('get_library_image', { appId: appID });
 	}
 </script>
 

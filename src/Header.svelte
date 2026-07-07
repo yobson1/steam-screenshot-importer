@@ -1,16 +1,16 @@
-<script>
+<script lang="ts">
 	import DarkToggle from './DarkToggle.svelte';
 	import { Hamburger } from 'svelte-hamburgers';
 	import Menu from './Menu.svelte';
-	import { darkModeEnabled } from './stores.js';
+	import { darkModeEnabled } from './stores.svelte';
 
-	let open = $state();
+	let open = $state(false);
 </script>
 
 <header>
 	<nav class="left">
 		<Menu bind:open />
-		<Hamburger bind:open --color={$darkModeEnabled ? 'white' : 'black'} type="arrowalt" />
+		<Hamburger bind:open --color={darkModeEnabled.value ? 'white' : 'black'} type="arrowalt" />
 	</nav>
 	<nav class="right">
 		<DarkToggle />

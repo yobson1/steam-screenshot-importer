@@ -1,12 +1,12 @@
 <script lang="ts">
 	import ImgLink from './ImgLink.svelte';
-	import { darkModeEnabled } from './stores.js';
+	import { darkModeEnabled } from './stores.svelte';
 	import { getVersion } from '@tauri-apps/api/app';
 	import { onMount } from 'svelte';
 
 	let versionProm = getVersion();
 
-	let version = $state();
+	let version: HTMLParagraphElement;
 	let augh = new Audio('/easter/juiced.mp3');
 	augh.volume = 0.25;
 	let clickCount = 0;
@@ -71,8 +71,8 @@
 <footer>
 	<nav class="left">
 		<p class="version" bind:this={version}>
-			{#await versionProm then version}
-				v{version}
+			{#await versionProm then appVersion}
+				v{appVersion}
 			{/await}
 		</p>
 	</nav>
@@ -86,7 +86,7 @@
 
 		<ImgLink
 			href="https://github.com/yobson1"
-			src={$darkModeEnabled ? 'GitHub-Mark-Light-32px.png' : 'GitHub-Mark-32px.png'}
+			src={darkModeEnabled.value ? 'GitHub-Mark-Light-32px.png' : 'GitHub-Mark-32px.png'}
 			alt="GitHub"
 		/>
 	</nav>

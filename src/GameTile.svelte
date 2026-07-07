@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { importScreenshots } from './screenshots.js';
+	import { importScreenshots } from './screenshots';
 	import VanillaTilt from 'vanilla-tilt';
-	let { imgSrc, appID, appName } = $props();
 
-	let tile = $state();
-	let img = $state();
+	let { imgSrc, appID, appName }: { imgSrc?: string; appID: number; appName: string } = $props();
+
+	let tile: HTMLDivElement;
+	let img: HTMLImageElement;
+
 	onMount(() => {
 		VanillaTilt.init(tile, {
 			reverse: true,
@@ -18,14 +20,12 @@
 			'max-glare': 0.5
 		});
 
-		tile.onclick = () => {
-			importScreenshots(appID);
-		};
+		tile.onclick = () => importScreenshots(appID);
 
 		img.onerror = () => {
 			img.src = 'defaultappimage.png';
-			let title = tile.querySelector('span');
-			title.style.visibility = 'visible';
+			const title = tile.querySelector('span');
+			if (title) title.style.visibility = 'visible';
 		};
 	});
 </script>

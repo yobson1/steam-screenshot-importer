@@ -1,15 +1,15 @@
-<script>
-	import { darkModeEnabled } from './stores.js';
+<script lang="ts">
+	import { darkModeEnabled } from './stores.svelte';
 
 	function toggle() {
-		window.document.body.classList.toggle('dark-mode');
-		let isDark = window.document.body.classList.contains('dark-mode');
-		darkModeEnabled.set(isDark);
+		document.body.classList.toggle('dark-mode');
+		const isDark = document.body.classList.contains('dark-mode');
+		darkModeEnabled.value = isDark;
 		localStorage.setItem('theme', isDark ? 'dark' : 'light');
 	}
 </script>
 
-<button onclick={toggle}></button>
+<button onclick={toggle} aria-label="Toggle dark mode"></button>
 
 <style>
 	button {

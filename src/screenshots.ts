@@ -3,7 +3,7 @@ import Swal from 'sweetalert2';
 import { listen } from '@tauri-apps/api/event';
 
 function sendScreenshots(paths: string[] | string, appID: number) {
-	return invoke('import_screenshots', { filePaths: paths, appId: appID });
+	return invoke<string>('import_screenshots', { filePaths: paths, appId: appID });
 }
 
 let progress = 0;
@@ -49,7 +49,7 @@ listen('screenshotImportError', (event) => {
 });
 
 function importScreenshots(appID: number) {
-	invoke('pick_screenshot_files').then((files: string[]) => {
+	invoke<string[]>('pick_screenshot_files').then((files) => {
 		if (files !== null && files.length > 0) {
 			Swal.fire({
 				title: 'Importing Screenshots',
@@ -59,7 +59,7 @@ function importScreenshots(appID: number) {
 				allowEscapeKey: false
 			});
 
-			sendScreenshots(files, appID).then((err: string) => {
+			sendScreenshots(files, appID).then((err) => {
 				if (err) {
 					Swal.fire({
 						title: 'Error',

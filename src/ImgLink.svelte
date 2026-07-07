@@ -3,40 +3,31 @@
 	import confetti from 'canvas-confetti';
 	import { openUrl } from '@tauri-apps/plugin-opener';
 
-	let btn = $state();
+	let {
+		href,
+		src,
+		alt,
+		size = null
+	}: { href: string; src: string; alt: string; size?: string | number | null } = $props();
+
+	let btn: HTMLAnchorElement;
 
 	onMount(() => {
 		btn.onclick = (event) => {
 			event.preventDefault();
-
 			confetti({
 				origin: {
-					x: event.clientX / window.visualViewport.width,
-					y: event.clientY / window.visualViewport.height
+					x: event.clientX / window.visualViewport!.width,
+					y: event.clientY / window.visualViewport!.height
 				},
 				angle: 130,
 				ticks: 300,
 				particleCount: 100,
 				disableForReducedMotion: true
 			});
-
 			openUrl(href);
 		};
 	});
-
-	interface Props {
-		href: any;
-		src: any;
-		alt: any;
-		size?: any;
-	}
-
-	let {
-		href,
-		src,
-		alt,
-		size = null
-	}: Props = $props();
 </script>
 
 <a draggable="false" {href} target="_blank" bind:this={btn}>

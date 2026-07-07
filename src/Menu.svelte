@@ -2,20 +2,16 @@
 	import { fly } from 'svelte/transition';
 	import NavButton from './NavButton.svelte';
 	import Swal from 'sweetalert2';
-	import { importScreenshots } from './screenshots.js';
+	import { importScreenshots } from './screenshots';
 	import { onMount } from 'svelte';
+	import type { MenuButton } from './types';
 
-	interface Props {
-		open?: boolean;
-		width?: number;
-	}
+	let { open = $bindable(false), width = 96 }: { open?: boolean; width?: number } = $props();
 
-	let { open = $bindable(false), width = 96 }: Props = $props();
-
-	let menu = $state();
+	let menu: HTMLDivElement;
 	onMount(() => {
 		document.body.onclick = (event) => {
-			let path = event.composedPath();
+			const path = event.composedPath();
 			if (
 				!path.includes(menu) &&
 				!path.includes(document.getElementsByClassName('hamburger')[0]) &&
@@ -26,14 +22,8 @@
 		};
 	});
 
-	// https://www.npmjs.com/package/svelte-simple-modal
-	let buttons = [
-		{
-			name: 'Home',
-			href: '/',
-			src: 'home.svg',
-			rotate: false
-		},
+	let buttons: MenuButton[] = [
+		{ name: 'Home', href: '/', src: 'home.svg', rotate: false },
 		{
 			name: 'App ID',
 			src: 'plus-circle.svg',
@@ -50,7 +40,6 @@
 
 				if (result.isConfirmed && result.value != null) {
 					const appIDInt = parseInt(result.value);
-
 					if (isNaN(appIDInt)) {
 						await Swal.fire({
 							title: 'Invalid App ID',
@@ -63,18 +52,8 @@
 				}
 			}
 		},
-		{
-			name: 'About',
-			href: '/about',
-			src: 'info.svg',
-			rotate: true
-		},
-		{
-			name: 'Options',
-			href: '/settings',
-			src: 'settings.svg',
-			rotate: true
-		}
+		{ name: 'About', href: '/about', src: 'info.svg', rotate: true },
+		{ name: 'Options', href: '/settings', src: 'settings.svg', rotate: true }
 	];
 </script>
 
@@ -86,15 +65,9 @@
 		box-shadow: {open ? '0 0 4px 5px rgba(0, 0, 0, 0.4)' : 'none'};"
 >
 	{#if open}
-		{#each buttons as button}
+		{#each buttons as button (button.name)}
 			<p transition:fly={{ duration: 525 }}>
-				<NavButton
-					name={button.name}
-					src={button.src}
-					href={button.href}
-					rotate={button.rotate}
-					onclick={button.onclick}
-				/>
+				<NavButton {...button} />
 			</p>
 		{/each}
 	{/if}
