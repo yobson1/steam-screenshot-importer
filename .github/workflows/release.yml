@@ -55,9 +55,9 @@ jobs:
         if: matrix.name == 'arch'
         run: |
           git config --global init.defaultBranch master
-          git config --global --add safe.directory /__w/steam-screenshot-importer/steam-screenshot-importer
+          git config --global --add safe.directory $(pwd)
           git init
-          git remote add origin https://github.com/${{ github.repository }}.git
+          git remote add origin https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
           git fetch origin ${{ github.ref }}
           git checkout ${{ github.sha }}
 
