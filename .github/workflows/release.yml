@@ -143,9 +143,22 @@ jobs:
 
       # ---------------- Windows build (.msi) ----------------
 
+      - name: Install Windows build dependencies
+        if: matrix.name == 'windows'
+        uses: crazy-max/ghaction-chocolatey@v4
+        with:
+          args: install pkgconfiglite
+
+      - name: Install dav1d
+        if: matrix.name == 'windows'
+        run: |
+          vcpkg install dav1d:x64-windows
+
       - name: Build Windows installer
         if: matrix.name == 'windows'
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v1
+        env:
+          PKG_CONFIG_PATH: ${{ env.VCPKG_INSTALLATION_ROOT }}\installed\x64-windows\lib\pkgconfig
         with:
           args: --bundles msi
 
