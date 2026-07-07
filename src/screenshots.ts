@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import Swal from 'sweetalert2';
 import { listen } from '@tauri-apps/api/event';
-import { screenshotSettings } from './settings.svelte';
+import { screenshotSettings } from './settings.store.svelte';
 
 function sendScreenshots(paths: string[] | string, appID: number) {
 	return invoke<string>('import_screenshots', {

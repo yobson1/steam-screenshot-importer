@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { screenshotSettings, FILTER_TYPES, type FilterType } from './settings.svelte';
+	import { screenshotSettings, FILTER_TYPES, type FilterType } from './settings.store.svelte';
 
 	const filterLabels: Record<FilterType, string> = {
 		Nearest: 'Nearest Neighbor: fastest, blockiest',
