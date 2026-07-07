@@ -2,6 +2,8 @@
 /dist/
 /src-tauri/steam_api/
 /src-tauri/tools/steamworks-fetcher/target/
+/pkg/arch/**
+!/pkg/arch/PKGBUILD
 
 .DS_Store
 
