@@ -215,10 +215,22 @@ const THUMB_WIDTH: u32 = steamworks::sys::k_ScreenshotThumbWidth as u32;
 const MAX_SIDE: u32 = 16000;
 const MAX_RESOLUTION: u32 = 26210175;
 
+fn parse_filter_type(s: &str) -> FilterType {
+    match s {
+        "Nearest" => FilterType::Nearest,
+        "Triangle" => FilterType::Triangle,
+        "CatmullRom" => FilterType::CatmullRom,
+        "Gaussian" => FilterType::Gaussian,
+        _ => FilterType::Lanczos3,
+    }
+}
+
 #[tauri::command]
 async fn import_screenshots<R: tauri::Runtime>(
     file_paths: Vec<String>,
     app_id: u32,
+    jpeg_quality: u8,
+    filter_type: String,
     window: tauri::Window<R>,
 ) -> String {
     info!(
@@ -233,12 +245,13 @@ async fn import_screenshots<R: tauri::Runtime>(
         return "No screenshots to import!".to_string();
     }
 
+    let jpeg_quality = jpeg_quality.clamp(1, 100);
+    let filter_type = parse_filter_type(&filter_type);
+
     let cache_dir = PROJECT_DIRS.cache_dir();
 
     // Check if steam is running and initialize client
     let client = initialize_steam(app_id).unwrap();
-
-    // window.emit(PROGRESS_EVENT, "Import started").unwrap();
 
     // Wrap shared resources in Arc for thread-safe sharing
     let window = Arc::new(window);
@@ -262,6 +275,8 @@ async fn import_screenshots<R: tauri::Runtime>(
             &client,
             &screenshots_completed,
             num_of_files,
+            jpeg_quality,
+            filter_type,
         );
     });
 
@@ -275,7 +290,6 @@ async fn import_screenshots<R: tauri::Runtime>(
     // Open the steam screenshots window for upload
     open_steam_section(&format!("screenshots/{}", app_id));
 
-    // Empty the cache
     info!("Emptying cache");
     remove_dir_all(*cache_dir)
         .and_then(|_| create_dir(*cache_dir))
@@ -314,17 +328,12 @@ fn import_single_screenshot<R: tauri::Runtime>(
     client: &Mutex<steamworks::Client>,
     screenshots_completed: &AtomicF32,
     total_screenshots: usize,
+    jpeg_quality: u8,
+    filter_type: FilterType,
 ) {
     let img_path = Path::new(file_path);
     let img_name = img_path.file_stem().unwrap().to_str().unwrap();
     let extension = img_path.extension().unwrap().to_str().unwrap();
-
-    // window
-    //     .emit(
-    //         PROGRESS_EVENT,
-    //         &format!("Loading {}.{}", img_name, extension),
-    //     )
-    //     .unwrap();
 
     let new_file_name = format!("{}_{}.jpg", img_name, app_id);
     let new_thumbnail_name = format!("{}_{}_thumb.jpg", img_name, app_id);
@@ -353,19 +362,9 @@ fn import_single_screenshot<R: tauri::Runtime>(
         || img.width() * img.height() > MAX_RESOLUTION
     {
         warn!(
-            "Image {}.{} is too large to be imported, it will be downscaled",
-            img_name, extension
+            "Image {}.{} is too large to be imported, it will be downscaled with {:?} q{}",
+            img_name, extension, filter_type, jpeg_quality
         );
-
-        // window
-        //     .emit(
-        //         PROGRESS_EVENT,
-        //         &format!(
-        //             "Resizing {}.{} to fit within steam's limits",
-        //             img_name, extension
-        //         ),
-        //     )
-        //     .unwrap();
 
         let scale_factor = f32::min(
             MAX_SIDE as f32 / f32::max(img.width() as f32, img.height() as f32),
@@ -380,20 +379,10 @@ fn import_single_screenshot<R: tauri::Runtime>(
                 img_name, extension
             );
 
-            // window
-            //     .emit(
-            //         PROGRESS_EVENT,
-            //         &format!(
-            //             "Skipping {}.{} as it is too large to be imported",
-            //             img_name, extension
-            //         ),
-            //     )
-            //     .unwrap();
-
             return;
         }
 
-        img = img.resize_exact(new_width, new_height, FilterType::Lanczos3);
+        img = img.resize_exact(new_width, new_height, filter_type);
 
         info!(
             "{}.{} new size: {}x{}",
@@ -402,16 +391,13 @@ fn import_single_screenshot<R: tauri::Runtime>(
     }
 
     if extension != "jpg" && extension != "jpeg" {
-        info!("Converting image {}.{} to jpg", img_name, extension);
-        // window
-        //     .emit(
-        //         PROGRESS_EVENT,
-        //         &format!("Converting image {}.{} to jpeg", img_name, extension),
-        //     )
-        //     .unwrap();
+        info!(
+            "Converting image {}.{} to jpg with {:?} q{}",
+            img_name, extension, filter_type, jpeg_quality
+        );
         let file = File::create(&new_img_path).unwrap();
         let writer = BufWriter::new(file);
-        let mut encoder = JpegEncoder::new_with_quality(writer, 95); // TODO: Make the quality configurable
+        let mut encoder = JpegEncoder::new_with_quality(writer, jpeg_quality);
         encoder.encode_image(&img).unwrap();
     } else {
         info!("Copying image {}.{}", img_name, extension);
@@ -421,21 +407,17 @@ fn import_single_screenshot<R: tauri::Runtime>(
     update_progress(window, screenshots_completed, total_screenshots, 0.3);
 
     // Create thumbnail image
-    info!("Resizing image {}.{} for thumbnail", img_name, extension);
-    // window
-    //     .emit(
-    //         PROGRESS_EVENT,
-    //         &format!("Resizing image {}.{} for thumbnail", img_name, extension),
-    //     )
-    //     .unwrap();
-
+    info!(
+        "Resizing image {}.{} for thumbnail with {:?} q{}",
+        img_name, extension, filter_type, jpeg_quality
+    );
     let thumb_img_path = cache_dir.join(&new_thumbnail_name);
 
     let thumb_height = (THUMB_WIDTH * img.height()) / img.width();
-    let thumb_img = resize(&img, THUMB_WIDTH, thumb_height, FilterType::Lanczos3);
+    let thumb_img = resize(&img, THUMB_WIDTH, thumb_height, filter_type);
     let file = File::create(&thumb_img_path).unwrap();
     let writer = BufWriter::new(&file);
-    let mut encoder = JpegEncoder::new_with_quality(writer, 95);
+    let mut encoder = JpegEncoder::new_with_quality(writer, jpeg_quality);
     encoder.encode_image(&thumb_img).unwrap();
 
     update_progress(window, screenshots_completed, total_screenshots, 0.4);
