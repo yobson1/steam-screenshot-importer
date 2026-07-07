@@ -20,6 +20,11 @@ struct Package {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    if std::env::var_os("NO_STEAMWORKS").is_some() {
+        println!("NO_STEAMWORKS set, skipping Steamworks binary fetch");
+        return Ok(());
+    }
+
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
 
     let lock_path = root.join("Cargo.lock");
