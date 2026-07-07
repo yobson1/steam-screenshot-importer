@@ -165,11 +165,10 @@ jobs:
 
       - name: Build Windows installer
         if: matrix.name == 'windows'
-        uses: tauri-apps/tauri-action@v1
         env:
           PKG_CONFIG_PATH: C:\vcpkg\installed\x64-windows\lib\pkgconfig
-        with:
-          args: --bundles msi
+        run: |
+          pnpm tauri build --ci --bundles msi
 
       - name: Upload Windows release asset
         if: matrix.name == 'windows'
