@@ -108,7 +108,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends --no-install-suggests \
             libdav1d-dev build-essential curl wget file \
-            libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+            libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf \
+            libnss3
 
       # ---------------- Rust/Node toolchain (appimage + windows only) ----------------
 
@@ -137,6 +138,13 @@ jobs:
       - name: Install frontend dependencies
         if: matrix.name != 'arch'
         run: pnpm install --frozen-lockfile
+
+      - name: Stage system NSS libraries for AppImage bundling
+        if: matrix.name == 'appimage'
+        run: |
+          mkdir -p src-tauri/nss-system
+          dpkg -L libnss3 | grep -E '\.so(\.[0-9]+)?$' | xargs -I{} cp -L {} src-tauri/nss-system/
+          find /usr/lib -maxdepth 2 -iname '*.chk' -exec cp {} src-tauri/nss-system/ \;
 
       - name: Build AppImage
         if: matrix.name == 'appimage'
