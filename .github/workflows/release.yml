@@ -47,7 +47,7 @@ jobs:
           pacman -Syu --noconfirm --needed \
             git gnupg zstd cargo cargo-tauri pnpm nodejs npm \
             cairo desktop-file-utils gdk-pixbuf2 xdg-utils glib2 gtk3 \
-            hicolor-icon-theme libsoup3 pango cef
+            hicolor-icon-theme libsoup3 pango cef pacman-contrib
 
       - name: Create unprivileged build user
         if: matrix.name == 'arch'
@@ -65,7 +65,18 @@ jobs:
         if: matrix.name == 'arch'
         run: |
           cd pkg/arch
+          version="${GITHUB_REF_NAME#v}"
+          sed -i "s/^pkgver=.*/pkgver=${version}/" PKGBUILD
+          sudo -u builder updpkgsums
           sudo -u builder makepkg --syncdeps --noconfirm
+
+      - name: Commit updated PKGBUILD
+        if: matrix.name == 'arch'
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: 'chore: update PKGBUILD for ${GITHUB_REF_NAME}'
+          file_pattern: pkg/arch/PKGBUILD
+          branch: main
 
       - name: Upload Arch release asset
         if: matrix.name == 'arch'
