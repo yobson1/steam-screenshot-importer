@@ -143,6 +143,12 @@ jobs:
 
       # ---------------- Windows build (.msi) ----------------
 
+      - name: Check vcpkg path
+        if: matrix.name == 'windows'
+        shell: pwsh
+        run: |
+          echo "VCPKG_INSTALLATION_ROOT=$env:VCPKG_INSTALLATION_ROOT"
+
       - name: Install Windows build dependencies
         if: matrix.name == 'windows'
         uses: crazy-max/ghaction-chocolatey@v4
