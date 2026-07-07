@@ -14,15 +14,15 @@ Theoretically supports all formats that the [images](https://github.com/image-rs
 Currently only distributing & testing for win64 
 
 ## Screenshots
-![Screenshot](https://i.imgur.com/TJvPV5g.png)
+![Screenshot](screenshots/home.png)
 
-![Screenshot](https://i.imgur.com/HHOc2bH.png)
+![Screenshot](screenshots/appid.png)
 
-![Screenshot](https://i.imgur.com/G9N1Hya.png)
+![Screenshot](screenshots/import_dialogue.png)
 
-![Screenshot](https://i.imgur.com/uh6TnLB.png)
+![Screenshot](screenshots/steam_import.png)
 
-![Screenshot](https://i.imgur.com/ZmsFQd5.png)
+![Screenshot](screenshots/about.png)
 
-## Light theme 🤷‍♂️
-![Screenshot](https://i.imgur.com/0OjkPnX.png)
+## Light theme
+![Screenshot](screenshots/light_home.png)
