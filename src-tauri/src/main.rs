@@ -296,8 +296,6 @@ async fn import_screenshots<R: tauri::Runtime>(
         .and_then(|_| create_dir(&ctx.cache_dir))
         .unwrap();
 
-    drop(ctx);
-
     String::default()
 }
 
