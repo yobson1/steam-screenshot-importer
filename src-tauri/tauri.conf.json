@@ -1,71 +1,70 @@
 {
-  "$schema": "..\\node_modules/@tauri-apps/cli\\schema.json",
-  "build": {
-    "beforeBuildCommand": "npm run build",
-    "beforeDevCommand": "npm run dev",
-    "devPath": "http://localhost:3000",
-    "distDir": "../public"
-  },
-  "package": {
-    "productName": "Steam Screenshot Importer"
-  },
-  "tauri": {
-    "allowlist": {
-      "all": true
-    },
-    "bundle": {
-      "active": true,
-      "category": "Utility",
-      "copyright": "",
-      "deb": {
-        "depends": []
-      },
-      "externalBin": [],
-      "icon": [
-        "icons/32x32.png",
-        "icons/128x128.png",
-        "icons/128x128@2x.png",
-        "icons/icon.icns",
-        "icons/icon.ico"
-      ],
-      "identifier": "com.yobson.ssi",
-      "longDescription": "",
-      "macOS": {
-        "entitlements": null,
-        "exceptionDomain": "",
-        "frameworks": [],
-        "providerShortName": null,
-        "signingIdentity": null
-      },
-      "resources": [
-        "./steam_api64.dll",
-        "./libsteam_api.so"
-    ],
-      "shortDescription": "Automates importing images to steam screenshots",
-      "targets": "msi",
-      "windows": {
-        "certificateThumbprint": null,
-        "digestAlgorithm": "sha256",
-        "timestampUrl": ""
-      }
-    },
-    "security": {
-      "csp": null
-    },
-    "updater": {
-      "active": true,
-    "endpoints": ["https://raw.githubusercontent.com/yobson1/steam-screenshot-importer/master/update.json"],
-    "dialog": false,
-    "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDk1NTRBMjg4NTQ5QjVGNzgKUldSNFg1dFVpS0pVbFlJdllvK0c3b1BlMFhmaHpxNmlhQm5CNVhaQzhjSUlxekNQTTRaaG1JNFYK"
-    },
-    "windows": [
-      {
-        "fullscreen": false,
-        "height": 780,
-        "resizable": true,
-        "title": "Steam Screenshot Importer",
-        "width": 1370
-      }
-    ]
-  }
+	"$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+	"build": {
+		"beforeBuildCommand": "npm run build",
+		"beforeDevCommand": "npm run dev",
+		"frontendDist": "../public",
+		"devUrl": "http://localhost:3000"
+	},
+	"bundle": {
+		"active": true,
+		"category": "Utility",
+		"copyright": "",
+		"targets": "msi",
+		"externalBin": [],
+		"icon": [
+			"icons/32x32.png",
+			"icons/128x128.png",
+			"icons/128x128@2x.png",
+			"icons/icon.icns",
+			"icons/icon.ico"
+		],
+		"windows": {
+			"certificateThumbprint": null,
+			"digestAlgorithm": "sha256",
+			"timestampUrl": ""
+		},
+		"longDescription": "",
+		"macOS": {
+			"entitlements": null,
+			"exceptionDomain": "",
+			"frameworks": [],
+			"providerShortName": null,
+			"signingIdentity": null
+		},
+		"resources": ["./steam_api64.dll", "./libsteam_api.so"],
+		"shortDescription": "Automates importing images to steam screenshots",
+		"linux": {
+			"deb": {
+				"depends": []
+			}
+		},
+		"createUpdaterArtifacts": "v1Compatible"
+	},
+	"productName": "Steam Screenshot Importer",
+	"mainBinaryName": "Steam Screenshot Importer",
+	"identifier": "com.yobson.ssi",
+	"plugins": {
+		"updater": {
+			"pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDk1NTRBMjg4NTQ5QjVGNzgKUldSNFg1dFVpS0pVbFlJdllvK0c3b1BlMFhmaHpxNmlhQm5CNVhaQzhjSUlxekNQTTRaaG1JNFYK",
+			"endpoints": [
+				"https://raw.githubusercontent.com/yobson1/steam-screenshot-importer/master/update.json"
+			]
+		}
+	},
+	"app": {
+		"windows": [
+			{
+				"fullscreen": false,
+				"height": 780,
+				"resizable": true,
+				"title": "Steam Screenshot Importer",
+				"width": 1370,
+				"useHttpsScheme": true
+			}
+		],
+		"security": {
+			"csp": null
+		}
+	}
 }

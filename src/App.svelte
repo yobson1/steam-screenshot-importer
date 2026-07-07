@@ -5,7 +5,7 @@
 	import Settings from './Settings.svelte';
 	import About from './About.svelte';
 	import { Route } from 'tinro';
-	import { invoke } from '@tauri-apps/api/tauri';
+	import { invoke } from '@tauri-apps/api/core';
 	import swal from 'sweetalert';
 
 	let get_games_prom = invoke('get_games');

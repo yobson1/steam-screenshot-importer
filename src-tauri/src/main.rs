@@ -31,6 +31,7 @@ use steamworks::sys::SteamAPI_SteamHTTP_v003 as get_steam_http;
 use steamworks::sys::SteamAPI_SteamScreenshots_v003 as get_steam_screenshots;
 use steamworks::{Client, SingleClient};
 use steamy_vdf as vdf;
+use tauri::Emitter;
 
 const LIB_CACHE_PATH: &str = "appcache\\librarycache\\";
 const PROGRESS_EVENT: &str = "screenshotImportProgress";
@@ -83,6 +84,33 @@ fn open_steam_section(section: &str) {
         .unwrap()
         .wait()
         .unwrap();
+}
+
+#[tauri::command]
+fn pick_screenshot_files() -> Vec<String> {
+    let default_dir =
+        directories::UserDirs::new().and_then(|dirs| dirs.picture_dir().map(|p| p.to_path_buf()));
+
+    let mut dialog = rfd::FileDialog::new()
+        .set_title("Select screenshots to import")
+        .add_filter(
+            "Images",
+            &[
+                "png", "jpg", "jpeg", "bmp", "ico", "tiff", "tif", "webp", "avif", "pnm", "dds",
+                "tga", "exr",
+            ],
+        );
+
+    if let Some(dir) = default_dir {
+        dialog = dialog.set_directory(dir);
+    }
+
+    dialog
+        .pick_files()
+        .unwrap_or_default()
+        .into_iter()
+        .map(|p| p.to_string_lossy().to_string())
+        .collect()
 }
 
 #[tauri::command]
@@ -145,7 +173,11 @@ const MAX_SIDE: u32 = 16000;
 const MAX_RESOLUTION: u32 = 26210175;
 
 #[tauri::command]
-async fn import_screenshots(file_paths: Vec<String>, app_id: u32, window: tauri::Window) -> String {
+async fn import_screenshots<R: tauri::Runtime>(
+    file_paths: Vec<String>,
+    app_id: u32,
+    window: tauri::Window<R>,
+) -> String {
     info!(
         "Importing {} screenshots under AppID {}",
         file_paths.len(),
@@ -231,10 +263,10 @@ fn wait_for_steam(app_id: u32) -> Result<(Client, SingleClient), String> {
     Err("Steam is not running and failed to automatically start".to_string())
 }
 
-fn import_single_screenshot(
+fn import_single_screenshot<R: tauri::Runtime>(
     file_path: &str,
     app_id: u32,
-    window: &tauri::Window,
+    window: &tauri::Window<R>,
     cache_dir: &Path,
     single: &Mutex<steamworks::SingleClient>,
     screenshots_completed: &AtomicF32,
@@ -389,8 +421,8 @@ fn import_single_screenshot(
     update_progress(window, screenshots_completed, total_screenshots, 0.3);
 }
 
-fn update_progress(
-    window: &tauri::Window,
+fn update_progress<R: tauri::Runtime>(
+    window: &tauri::Window<R>,
     screenshots_completed: &AtomicF32,
     total_screenshots: usize,
     step_progress: f32,
@@ -411,10 +443,13 @@ fn main() {
     create_dir_all(cache_dir).unwrap();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .invoke_handler(tauri::generate_handler![
             get_games,
             get_recent_steam_user,
-            import_screenshots
+            import_screenshots,
+            pick_screenshot_files
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

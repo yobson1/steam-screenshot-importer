@@ -1,5 +1,5 @@
-import { checkUpdate, installUpdate } from '@tauri-apps/api/updater';
-import { relaunch } from '@tauri-apps/api/process';
+import { check } from '@tauri-apps/plugin-updater';
+import { relaunch } from '@tauri-apps/plugin-process';
 import { listen } from '@tauri-apps/api/event';
 import swal from 'sweetalert';
 
@@ -29,8 +29,10 @@ listen('tauri://update-download-progress', (event) => {
 	});
 });
 
+// TODO: Just alert when there's an update and instruct Linux users to use their package manager
+// then we can drop the updater & process plugin too
 async function runUpdateCheck() {
-	const { shouldUpdate, manifest } = await checkUpdate();
+	const { shouldUpdate, manifest } = await check();
 	if (shouldUpdate) {
 		if (
 			await swal({
@@ -56,7 +58,6 @@ async function runUpdateCheck() {
 					}
 				}
 			});
-			await installUpdate();
 			await relaunch();
 		}
 	}
