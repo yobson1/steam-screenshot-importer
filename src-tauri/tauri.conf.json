@@ -17,10 +17,15 @@
 			"icons/icon.icns",
 			"icons/icon.ico"
 		],
-		"shortDescription": "Automates importing images to steam screenshots"
+		"shortDescription": "Automates importing images to steam screenshots",
+		"linux": {
+			"deb": {
+				"desktopTemplate": "template.desktop"
+			}
+		}
 	},
 	"productName": "steam-screenshot-importer",
-	"mainBinaryName": "ssi",
+	"mainBinaryName": "steam-screenshot-importer",
 	"identifier": "com.yobson.ssi",
 	"app": {
 		"windows": [
