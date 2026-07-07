@@ -14,6 +14,12 @@
 	get_games_prom.catch((error) => {
 		Swal.fire('Error', error, 'error');
 	});
+
+	function getSteamLibraryImage(appID) {
+		return invoke('get_library_image', {
+			appId: appID
+		});
+	}
 </script>
 
 <Header />
@@ -34,12 +40,19 @@
 			{:then games}
 				<section class="tiles">
 					{#each games as game}
-						<GameTile
-							appID={game[0]}
-							appName={game[2]}
-							imgSrc={(game[1] != '' && 'data:image/jpeg;base64,' + game[1]) ||
-								`https://cdn.cloudflare.steamstatic.com/steam/apps/${game[0]}/library_600x900.jpg`}
-						/>
+						{#if game[1] !== ''}
+							<GameTile
+								appID={game[0]}
+								appName={game[2]}
+								imgSrc={'data:image/jpeg;base64,' + game[1]}
+							/>
+						{:else}
+							{#await getSteamLibraryImage(game[0])}
+								<GameTile appID={game[0]} appName={game[2]} />
+							{:then image}
+								<GameTile appID={game[0]} appName={game[2]} imgSrc={image ?? ''} />
+							{/await}
+						{/if}
 					{/each}
 				</section>
 			{:catch error}

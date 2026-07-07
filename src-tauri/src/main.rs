@@ -6,6 +6,7 @@ use image::ImageReader;
 use lazy_static::lazy_static;
 use log::{error, info, warn};
 use rayon::prelude::*;
+use serde_json::Value;
 use simple_logger::SimpleLogger;
 use std::collections::HashMap;
 use std::ffi::CString;
@@ -13,60 +14,26 @@ use std::fs::{create_dir, create_dir_all, read, remove_dir_all, File};
 use std::io::BufWriter;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use std::sync::OnceLock;
 use std::sync::{atomic::Ordering, Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 use steamlocate::{SteamApp, SteamDir};
-use steamworks::sys::EHTTPMethod;
-use steamworks::sys::SteamAPICall_t;
-use steamworks::sys::SteamAPI_ISteamHTTP_CreateHTTPRequest as steam_http_create;
-use steamworks::sys::SteamAPI_ISteamHTTP_GetHTTPDownloadProgressPct as http_get_download_progress;
-use steamworks::sys::SteamAPI_ISteamHTTP_GetHTTPResponseBodyData as http_get_response_body_data;
-use steamworks::sys::SteamAPI_ISteamHTTP_GetHTTPResponseBodySize as http_get_response_body_size;
-use steamworks::sys::SteamAPI_ISteamHTTP_ReleaseHTTPRequest as steam_http_release;
-use steamworks::sys::SteamAPI_ISteamHTTP_SendHTTPRequest as steam_http_send;
 use steamworks::sys::SteamAPI_ISteamScreenshots_AddScreenshotToLibrary as add_screenshot_to_library;
 use steamworks::sys::SteamAPI_IsSteamRunning as is_steam_running;
-use steamworks::sys::SteamAPI_SteamHTTP_v003 as get_steam_http;
 use steamworks::sys::SteamAPI_SteamScreenshots_v003 as get_steam_screenshots;
-use steamworks::{Client, SingleClient};
+use steamworks::Client;
 use steamy_vdf as vdf;
 use tauri::Emitter;
+use walkdir::WalkDir;
 
-const LIB_CACHE_PATH: &str = "appcache\\librarycache\\";
+static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+const LIB_CACHE_PATH: &str = "appcache/librarycache/";
 const PROGRESS_EVENT: &str = "screenshotImportProgress";
 const ERROR_EVENT: &str = "screenshotImportError";
 
 lazy_static! {
     static ref PROJECT_DIRS: ProjectDirs = ProjectDirs::from("com", "yob", "ssi").unwrap();
-}
-
-unsafe fn steam_http_get(url: &str) -> String {
-    let url = CString::new(url).unwrap();
-    let http = get_steam_http();
-    let request_handle = steam_http_create(http, EHTTPMethod::k_EHTTPMethodGET, url.as_ptr());
-    let mut api_call: SteamAPICall_t = 0;
-    steam_http_send(http, request_handle, &mut api_call as *mut _);
-
-    let mut progress: f32 = 0.0;
-    loop {
-        http_get_download_progress(http, request_handle, &mut progress as *mut _);
-
-        if progress == 100.0 {
-            break;
-        }
-    }
-
-    let mut buf_size: u32 = 0;
-
-    http_get_response_body_size(http, request_handle, &mut buf_size as *mut _);
-
-    let mut buf: Vec<u8> = vec![0; buf_size.try_into().unwrap()];
-    http_get_response_body_data(http, request_handle, &mut buf[0] as *mut _, buf_size);
-
-    steam_http_release(http, request_handle);
-
-    String::from_utf8(buf).unwrap()
 }
 
 fn open_steam_section(section: &str) {
@@ -113,6 +80,23 @@ fn pick_screenshot_files() -> Vec<String> {
         .collect()
 }
 
+fn find_library_capsule(steam_path: &Path, appid: u32) -> Option<PathBuf> {
+    let app_cache_path = steam_path.join(LIB_CACHE_PATH).join(appid.to_string());
+
+    for entry in WalkDir::new(app_cache_path)
+        .into_iter()
+        .filter_map(Result::ok)
+    {
+        let file_name = entry.file_name().to_string_lossy();
+
+        if file_name == "library_capsule.jpg" || file_name == "library_600x900.jpg" {
+            return Some(entry.path().to_path_buf());
+        }
+    }
+
+    None
+}
+
 #[tauri::command]
 fn get_games() -> Result<Vec<(u32, String, String)>, String> {
     let mut steamdir: SteamDir = SteamDir::locate().ok_or("Failed to locate Steam installation")?;
@@ -122,17 +106,76 @@ fn get_games() -> Result<Vec<(u32, String, String)>, String> {
 
     let mut imgs: Vec<(u32, String, String)> = vec![];
     for appid in apps {
-        let img_path: PathBuf = steam_path
-            .join(LIB_CACHE_PATH)
-            .join(format!("{}_library_600x900.jpg", appid));
-        let img: Vec<u8> = read(&img_path).unwrap_or_default();
-        let b64_img: String = base64::encode(img);
+        let img = find_library_capsule(&steam_path, appid)
+            .and_then(|path| {
+                info!("Found image path: {}", path.display());
+                read(path).ok()
+            })
+            .unwrap_or_default();
+
+        let b64_img = base64::encode(img);
+
         let app = apps_hash.get(&appid).unwrap().as_ref().unwrap();
+
         let name = app.name.as_ref().unwrap();
+
         imgs.push((appid, b64_img, name.to_string()));
     }
 
     Ok(imgs)
+}
+
+fn http_client() -> &'static reqwest::Client {
+    HTTP_CLIENT.get_or_init(reqwest::Client::new)
+}
+
+#[tauri::command]
+async fn get_library_image(app_id: u32) -> Option<String> {
+    let input = serde_json::json!({
+        "ids": [
+            {
+                "appid": app_id
+            }
+        ],
+        "context": {
+            "language": "english",
+            "country_code": "US"
+        },
+        "data_request": {
+            "include_assets": true
+        }
+    });
+
+    let response = http_client()
+        .get("https://api.steampowered.com/IStoreBrowseService/GetItems/v1/")
+        .query(&[("input_json", input.to_string())])
+        .send()
+        .await
+        .ok()?
+        .text()
+        .await
+        .ok()?;
+
+    let json: Value = serde_json::from_str(&response).ok()?;
+
+    let assets = json
+        .get("response")?
+        .get("store_items")?
+        .get(0)?
+        .get("assets")?;
+
+    let format = assets.get("asset_url_format")?.as_str()?;
+
+    let capsule = assets.get("library_capsule")?.as_str()?;
+
+    let url = format!(
+        "https://shared.fastly.steamstatic.com/store_item_assets/{}",
+        format.replace("${FILENAME}", capsule)
+    );
+
+    info!("Resolved URL for AppID {}: {}", app_id, url);
+
+    Some(url)
 }
 
 #[tauri::command]
@@ -193,14 +236,14 @@ async fn import_screenshots<R: tauri::Runtime>(
     let cache_dir = PROJECT_DIRS.cache_dir();
 
     // Check if steam is running and initialize client
-    let (client, single) = initialize_steam(app_id).unwrap();
+    let client = initialize_steam(app_id).unwrap();
 
     // window.emit(PROGRESS_EVENT, "Import started").unwrap();
 
     // Wrap shared resources in Arc for thread-safe sharing
     let window = Arc::new(window);
     let cache_dir = Arc::new(cache_dir);
-    let single = Arc::new(Mutex::new(single));
+    let client = Arc::new(Mutex::new(client));
 
     // Progress bar
     let screenshots_completed = AtomicF32::new(0.0);
@@ -209,14 +252,14 @@ async fn import_screenshots<R: tauri::Runtime>(
     file_paths.par_iter().for_each(|file_path| {
         let window = Arc::clone(&window);
         let cache_dir = Arc::clone(&cache_dir);
-        let single = Arc::clone(&single);
+        let client = Arc::clone(&client);
 
         import_single_screenshot(
             file_path,
             app_id,
             &window,
             &cache_dir,
-            &single,
+            &client,
             &screenshots_completed,
             num_of_files,
         );
@@ -241,7 +284,7 @@ async fn import_screenshots<R: tauri::Runtime>(
     String::default()
 }
 
-fn initialize_steam(app_id: u32) -> Result<(Client, SingleClient), String> {
+fn initialize_steam(app_id: u32) -> Result<Client, String> {
     if unsafe { is_steam_running() } {
         Client::init_app(app_id).map_err(|_| "Failed to initialize steamworks!\nMake sure steam is open and you own the game you're attempting to import for.".to_string())
     } else {
@@ -250,7 +293,7 @@ fn initialize_steam(app_id: u32) -> Result<(Client, SingleClient), String> {
     }
 }
 
-fn wait_for_steam(app_id: u32) -> Result<(Client, SingleClient), String> {
+fn wait_for_steam(app_id: u32) -> Result<Client, String> {
     let start = Instant::now();
     while start.elapsed().as_secs() < 20 {
         if let Ok(client) = Client::init_app(app_id) {
@@ -268,7 +311,7 @@ fn import_single_screenshot<R: tauri::Runtime>(
     app_id: u32,
     window: &tauri::Window<R>,
     cache_dir: &Path,
-    single: &Mutex<steamworks::SingleClient>,
+    client: &Mutex<steamworks::Client>,
     screenshots_completed: &AtomicF32,
     total_screenshots: usize,
 ) {
@@ -414,7 +457,7 @@ fn import_single_screenshot<R: tauri::Runtime>(
             img.width().try_into().unwrap(),
             img.height().try_into().unwrap(),
         );
-        single.lock().unwrap().run_callbacks();
+        client.lock().unwrap().run_callbacks();
     }
     info!("Import of {}.{} complete", img_name, extension);
 
@@ -448,7 +491,8 @@ fn main() {
             get_games,
             get_recent_steam_user,
             import_screenshots,
-            pick_screenshot_files
+            pick_screenshot_files,
+            get_library_image
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
