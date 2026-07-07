@@ -1,6 +1,7 @@
 import App from './App.svelte';
 import { darkModeEnabled } from './stores.js';
 import runUpdateCheck from './updater.js';
+import { mount } from "svelte";
 
 function setDark(dark: boolean) {
 	if (dark) {
@@ -24,7 +25,7 @@ if (
 
 runUpdateCheck();
 
-const app = new App({
+const app = mount(App, {
 	target: document.body
 });
 

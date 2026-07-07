@@ -9,7 +9,7 @@
 	}
 </script>
 
-<button on:click={toggle} />
+<button onclick={toggle}></button>
 
 <style>
 	button {

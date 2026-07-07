@@ -4,7 +4,7 @@
 	import Menu from './Menu.svelte';
 	import { darkModeEnabled } from './stores.js';
 
-	let open;
+	let open = $state();
 </script>
 
 <header>

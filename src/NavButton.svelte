@@ -1,13 +1,15 @@
-<script>
+<script lang="ts">
 	import { onMount } from 'svelte';
 
-	export let name,
+	let {
+		name,
 		href,
 		src,
 		rotate,
-		onclick = () => {};
+		onclick = () => {}
+	} = $props();
 
-	let btn;
+	let btn = $state();
 	onMount(() => {
 		btn.onclick = onclick;
 	});

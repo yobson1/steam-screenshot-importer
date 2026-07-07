@@ -1,13 +1,11 @@
-<script>
-	export let imgSrc;
-	export let appID;
-	export let appName;
+<script lang="ts">
 	import { onMount } from 'svelte';
 	import { importScreenshots } from './screenshots.js';
 	import VanillaTilt from 'vanilla-tilt';
+	let { imgSrc, appID, appName } = $props();
 
-	let tile;
-	let img;
+	let tile = $state();
+	let img = $state();
 	onMount(() => {
 		VanillaTilt.init(tile, {
 			reverse: true,

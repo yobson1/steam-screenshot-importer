@@ -1,9 +1,9 @@
-<script>
+<script lang="ts">
 	import { onMount } from 'svelte';
 	import confetti from 'canvas-confetti';
 	import { openUrl } from '@tauri-apps/plugin-opener';
 
-	let btn;
+	let btn = $state();
 
 	onMount(() => {
 		btn.onclick = (event) => {
@@ -24,10 +24,19 @@
 		};
 	});
 
-	export let href,
+	interface Props {
+		href: any;
+		src: any;
+		alt: any;
+		size?: any;
+	}
+
+	let {
+		href,
 		src,
 		alt,
-		size = null;
+		size = null
+	}: Props = $props();
 </script>
 
 <a draggable="false" {href} target="_blank" bind:this={btn}>

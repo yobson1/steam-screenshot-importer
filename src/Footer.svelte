@@ -6,7 +6,7 @@
 
 	let versionProm = getVersion();
 
-	let version;
+	let version = $state();
 	let augh = new Audio('/easter/juiced.mp3');
 	augh.volume = 0.25;
 	let clickCount = 0;

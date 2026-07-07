@@ -5,10 +5,14 @@
 	import { importScreenshots } from './screenshots.js';
 	import { onMount } from 'svelte';
 
-	export let open = false;
-	export let width = 96;
+	interface Props {
+		open?: boolean;
+		width?: number;
+	}
 
-	let menu;
+	let { open = $bindable(false), width = 96 }: Props = $props();
+
+	let menu = $state();
 	onMount(() => {
 		document.body.onclick = (event) => {
 			let path = event.composedPath();
