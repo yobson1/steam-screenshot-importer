@@ -19,7 +19,6 @@ use std::sync::OnceLock;
 use std::sync::{Arc, Mutex, atomic::Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
-use steamlocate::{SteamApp, SteamDir};
 use steamworks::Client;
 use steamworks::sys::SteamAPI_ISteamScreenshots_AddScreenshotToLibrary as add_screenshot_to_library;
 use steamworks::sys::SteamAPI_IsSteamRunning as is_steam_running;
@@ -100,14 +99,29 @@ fn find_library_capsule(steam_path: &Path, appid: u32) -> Option<PathBuf> {
 
 #[tauri::command]
 fn get_games() -> Result<Vec<(u32, String, String)>, String> {
-    let mut steamdir: SteamDir = SteamDir::locate().ok_or("Failed to locate Steam installation")?;
-    let apps_hash: HashMap<u32, Option<SteamApp>> = steamdir.apps().clone();
+    let steam_dir = steamlocate::locate().map_err(|_| "Failed to locate Steam installation")?;
+    let apps_hash: HashMap<u32, steamlocate::App> = steam_dir
+        .libraries()
+        .map_err(|_| "Failed to get Steam libraries")?
+        .filter_map(|library| {
+            let library = library.ok()?;
+
+            Some(
+                library
+                    .apps()
+                    .filter_map(Result::ok)
+                    .map(|app| (app.app_id, app))
+                    .collect::<HashMap<_, _>>(),
+            )
+        })
+        .flatten()
+        .collect();
     let apps: Vec<u32> = apps_hash.keys().cloned().collect();
-    let steam_path: PathBuf = steamdir.path;
+    let steam_path = steam_dir.path();
 
     let mut imgs: Vec<(u32, String, String)> = vec![];
     for appid in apps {
-        let img = find_library_capsule(&steam_path, appid)
+        let img = find_library_capsule(steam_path, appid)
             .and_then(|path| {
                 info!("Found image path: {}", path.display());
                 read(path).ok()
@@ -116,7 +130,7 @@ fn get_games() -> Result<Vec<(u32, String, String)>, String> {
 
         let b64_img = STANDARD_NO_PAD.encode(img);
 
-        let app = apps_hash.get(&appid).unwrap().as_ref().unwrap();
+        let app = apps_hash.get(&appid).unwrap();
 
         let name = app.name.as_ref().unwrap();
 
@@ -181,8 +195,8 @@ async fn get_library_image(app_id: u32) -> Option<String> {
 
 #[tauri::command]
 fn get_recent_steam_user() -> Result<String, String> {
-    let steamdir: SteamDir = SteamDir::locate().ok_or("Failed to locate Steam installation")?;
-    let steam_path: PathBuf = steamdir.path;
+    let steam_dir = steamlocate::locate().map_err(|_| "Failed to locate Steam installation")?;
+    let steam_path = steam_dir.path();
     let vdf_path: PathBuf = steam_path.join("config").join("loginusers.vdf");
 
     let loginusers = vdf::load(&vdf_path).unwrap();
