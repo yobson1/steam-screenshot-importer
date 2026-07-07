@@ -106,13 +106,9 @@ jobs:
         if: matrix.name == 'appimage'
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libappindicator3-dev libdav1d-dev librsvg2-dev libudev-dev patchelf \
-            libwebkit2gtk-4.1-0=2.44.0-2 \
-            libwebkit2gtk-4.1-dev=2.44.0-2 \
-            libjavascriptcoregtk-4.1-0=2.44.0-2 \
-            libjavascriptcoregtk-4.1-dev=2.44.0-2 \
-            gir1.2-javascriptcoregtk-4.1=2.44.0-2 \
-            gir1.2-webkit2-4.1=2.44.0-2
+          sudo apt-get install -y --no-install-recommends --no-install-suggests \
+            libdav1d-dev build-essential curl wget file \
+            libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf
 
       # ---------------- Rust/Node toolchain (appimage + windows only) ----------------
 
@@ -144,7 +140,9 @@ jobs:
 
       - name: Build AppImage
         if: matrix.name == 'appimage'
-        run: pnpm tauri build --ci --bundles appimage
+        env:
+          NO_STRIP: 'true'
+        run: pnpm tauri build --ci --bundles appimage --verbose
 
       - name: Upload AppImage release asset
         if: matrix.name == 'appimage'
