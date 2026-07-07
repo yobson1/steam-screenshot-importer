@@ -1,0 +1,149 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: arch
+            os: ubuntu-latest
+            container: archlinux:base-devel
+          - name: appimage
+            os: ubuntu-latest
+            container: ''
+          - name: windows
+            os: windows-latest
+            container: ''
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      # ---------------- Arch build (pacman package + .deb) ----------------
+
+      - name: Upgrade Arch Linux
+        if: matrix.name == 'arch'
+        uses: arch4edu/cactus/actions/upgrade-archlinux@main
+
+      - name: Install Arch build dependencies
+        if: matrix.name == 'arch'
+        run: |
+          pacman -Syu --noconfirm --needed \
+            git gnupg zstd cargo cargo-tauri pnpm nodejs npm \
+            cairo desktop-file-utils gdk-pixbuf2 xdg-utils glib2 gtk3 \
+            hicolor-icon-theme libsoup3 pango cef
+
+      - name: Create unprivileged build user
+        if: matrix.name == 'arch'
+        run: |
+          useradd -m builder
+          echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
+          chown -R builder:builder "$GITHUB_WORKSPACE"
+
+      - name: Import PKGBUILD signing key
+        if: matrix.name == 'arch'
+        run: |
+          sudo -u builder gpg --fetch-keys https://github.com/yobson1.gpg
+
+      - name: Build Arch package
+        if: matrix.name == 'arch'
+        run: |
+          cd pkg/arch
+          sudo -u builder makepkg --syncdeps --noconfirm
+
+      - name: Publish Arch release assets
+        if: matrix.name == 'arch'
+        uses: softprops/action-gh-release@v3
+        with:
+          generate_release_notes: true
+          make_latest: true
+          draft: true
+          files: |
+            pkg/arch/*.pkg.tar.zst
+            pkg/arch/src/steam-screenshot-importer/src-tauri/target/release/bundle/deb/*.deb
+
+      # ---------------- Plain Ubuntu build (AppImage) ----------------
+
+      - name: Install Linux build dependencies
+        if: matrix.name == 'appimage'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends --no-install-suggests \
+            libwebkit2gtk-4.1-dev build-essential curl wget file \
+            libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      # ---------------- Rust/Node toolchain (appimage + windows only) ----------------
+
+      - name: Setup Rust
+        if: matrix.name != 'arch'
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        if: matrix.name != 'arch'
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: Setup Node
+        if: matrix.name != 'arch'
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Setup pnpm
+        if: matrix.name != 'arch'
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Install frontend dependencies
+        if: matrix.name != 'arch'
+        run: pnpm install --frozen-lockfile
+
+      - name: Build AppImage
+        if: matrix.name == 'appimage'
+        uses: tauri-apps/tauri-action@v0
+        with:
+          args: --bundles appimage
+
+      - name: Publish AppImage release asset
+        if: matrix.name == 'appimage'
+        uses: softprops/action-gh-release@v3
+        with:
+          generate_release_notes: true
+          make_latest: true
+          draft: true
+          files: src-tauri/target/release/bundle/appimage/*.AppImage
+
+      # ---------------- Windows build (.msi) ----------------
+
+      - name: Build Windows installer
+        if: matrix.name == 'windows'
+        uses: tauri-apps/tauri-action@v0
+        with:
+          args: --bundles msi
+
+      - name: Publish Windows release asset
+        if: matrix.name == 'windows'
+        uses: softprops/action-gh-release@v3
+        with:
+          generate_release_notes: true
+          make_latest: true
+          draft: false
+          files: src-tauri/target/release/bundle/msi/*.msi
