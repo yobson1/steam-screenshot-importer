@@ -76,7 +76,7 @@ jobs:
         with:
           commit_message: 'chore: update PKGBUILD for ${GITHUB_REF_NAME}'
           file_pattern: pkg/arch/PKGBUILD
-          branch: main
+          branch: master
 
       - name: Upload Arch release asset
         if: matrix.name == 'arch'
