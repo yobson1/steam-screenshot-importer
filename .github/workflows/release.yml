@@ -146,6 +146,9 @@ jobs:
           dpkg -L libnss3 | grep -E '\.so(\.[0-9]+)?$' | xargs -I{} cp -L {} src-tauri/nss-system/
           find /usr/lib -maxdepth 2 -iname '*.chk' -exec cp {} src-tauri/nss-system/ \;
 
+          echo "== Staged NSS files (src-tauri/nss-system) =="
+          ls -la src-tauri/nss-system/
+
       - name: Build AppImage
         if: matrix.name == 'appimage'
         env:
