@@ -36,7 +36,7 @@ build() {
 
     # a makepkg conf file may overwrite RUSTFLAGS, we need to set it here as per upstream:
     # https://github.com/yobson1/steam-screenshot-importer/blob/master/src-tauri/.cargo/config.toml
-    export RUSTFLAGS="$RUSTFLAGS -C link-arg=-Wl,-rpath,\$ORIGIN:/usr/lib/cef:/usr/lib/steam-screenshot-importer/steam_api"
+    export RUSTFLAGS="$RUSTFLAGS -C link-arg=-Wl,-rpath,\$ORIGIN:/usr/lib/cef:/usr/lib/steam-screenshot-importer"
 
     cd "$srcdir/$pkgname"
     cargo tauri build -b deb -- --frozen

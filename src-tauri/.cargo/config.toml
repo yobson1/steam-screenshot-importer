@@ -1,2 +1,2 @@
 [target.'cfg(target_os = "linux")']
-rustflags = ["-C", "link-arg=-Wl,-rpath,$ORIGIN:/usr/lib/cef:/usr/lib/steam-screenshot-importer/steam_api"]
+rustflags = ["-C", "link-arg=-Wl,-rpath,$ORIGIN:/usr/lib/cef:/usr/lib/steam-screenshot-importer"]

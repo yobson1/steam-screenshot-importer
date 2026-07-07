@@ -4,6 +4,8 @@
 /src-tauri/tools/steamworks-fetcher/target/
 /pkg/arch/**
 !/pkg/arch/PKGBUILD
+libsteam_api.so
+steam_api64.dll
 
 .DS_Store
 

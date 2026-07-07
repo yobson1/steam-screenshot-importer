@@ -60,13 +60,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     )?;
 
     update_link(
-        &steam_dir.join("steam_api64.dll"),
-        &PathBuf::from(version).join("steam_api64.dll"),
+        &root.join("steam_api64.dll"),
+        &version_dir.join("steam_api64.dll"),
     )?;
 
     update_link(
-        &steam_dir.join("libsteam_api.so"),
-        &PathBuf::from(version).join("libsteam_api.so"),
+        &root.join("libsteam_api.so"),
+        &version_dir.join("libsteam_api.so"),
     )?;
 
     Ok(())

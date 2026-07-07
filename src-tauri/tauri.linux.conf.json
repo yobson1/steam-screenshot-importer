@@ -1,5 +1,5 @@
 {
 	"bundle": {
-		"resources": ["./steam_api/libsteam_api.so"]
+		"resources": ["./libsteam_api.so"]
 	}
 }
