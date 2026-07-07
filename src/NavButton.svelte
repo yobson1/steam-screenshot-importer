@@ -10,7 +10,7 @@
 	});
 </script>
 
-<a {href}>
+<a href={href ? '#' + href : undefined}>
 	<button bind:this={btn}>
 		<span class="img-container">
 			<img class={rotate ? 'rotate' : ''} {src} alt={name} />

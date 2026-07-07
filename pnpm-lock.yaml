@@ -26,6 +26,9 @@ importers:
       svelte-hamburgers:
         specifier: ^5.0.0
         version: 5.0.0(svelte@5.56.4)
+      svelte-spa-router:
+        specifier: ^5.1.1
+        version: 5.1.1(svelte@5.56.4)
       sweetalert2:
         specifier: ^11.26.25
         version: 11.26.25
@@ -57,9 +60,6 @@ importers:
       svelte-check:
         specifier: ^4.7.1
         version: 4.7.1(picomatch@4.0.5)(svelte@5.56.4)(typescript@6.0.3)
-      tinro:
-        specifier: ^0.6.12
-        version: 0.6.12
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -505,6 +505,10 @@ packages:
     resolution: {integrity: sha512-GDhwkLfywWL2s6vEjyhri+eXmfH6j1L7JE27WhqLeYzoh/A3DBaYGEj2H/HFZCn/kMfim73FXxEJTw06WtxQwg==}
     engines: {node: '>= 14.18.0'}
 
+  regexparam@2.0.2:
+    resolution: {integrity: sha512-A1PeDEYMrkLrfyOwv2jwihXbo9qxdGD3atBYQA9JJgreAx8/7rC6IUkWOw2NQlOxLp2wL0ifQbh1HuidDfYA6w==}
+    engines: {node: '>=8'}
+
   rolldown@1.1.4:
     resolution: {integrity: sha512-IjZYiLxZwpnhwhdBH2ugdTGVSdhCQUmLxLoqyjiL0JxYjyRst+5a0P3xfrTxJ5F638j4Mvvw5FAX5XE6eHpXbA==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -531,15 +535,17 @@ packages:
     peerDependencies:
       svelte: ^5.0.0
 
+  svelte-spa-router@5.1.1:
+    resolution: {integrity: sha512-/9PiiyS2jQIXlP+NlKRcPl/Bgwm6WTCTmJq8TZw5IShEbozwcfpX2V3YEL4lAVgJJ2Ni+ipAH7aYVEupeNwtHA==}
+    peerDependencies:
+      svelte: ^5.0.0
+
   svelte@5.56.4:
     resolution: {integrity: sha512-/d0QHehmRuJW8gVz395MTkPcPozxzdjBMBE8oEYGz8O3b9KTMzzQ9ZHJQLuFKOHOPQbU6kx/X4iid/EBBzH7iw==}
     engines: {node: '>=18'}
 
   sweetalert2@11.26.25:
     resolution: {integrity: sha512-+hunCOJdJ6FLj04T9YSLvvZXRjsvIkTeTKP2e4VF8CaBias961BTnWiSFAy7F/CM5eq3QK2Rraoc5Gzftslvkg==}
-
-  tinro@0.6.12:
-    resolution: {integrity: sha512-YYLh0a21GXXpS66ilZbywfXcPTKQQ+bv3tihoqKqSFQP6/F11N7ZmtRbFWcyZXXPFRSzNxmPJBB8ZhP0GkoS0Q==}
 
   tinyglobby@0.2.17:
     resolution: {integrity: sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g==}
@@ -914,6 +920,8 @@ snapshots:
 
   readdirp@4.1.2: {}
 
+  regexparam@2.0.2: {}
+
   rolldown@1.1.4:
     dependencies:
       '@oxc-project/types': 0.138.0
@@ -958,6 +966,11 @@ snapshots:
     dependencies:
       svelte: 5.56.4
 
+  svelte-spa-router@5.1.1(svelte@5.56.4):
+    dependencies:
+      regexparam: 2.0.2
+      svelte: 5.56.4
+
   svelte@5.56.4:
     dependencies:
       '@jridgewell/remapping': 2.3.5
@@ -980,8 +993,6 @@ snapshots:
       - '@typescript-eslint/types'
 
   sweetalert2@11.26.25: {}
-
-  tinro@0.6.12: {}
 
   tinyglobby@0.2.17:
     dependencies:
