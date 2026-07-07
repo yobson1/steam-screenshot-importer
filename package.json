@@ -14,9 +14,8 @@
 		"@tauri-apps/cli": "^2.11.4",
 		"@tsconfig/svelte": "^5.0.8",
 		"@types/node": "^26.1.0",
-		"prettier": "^3.2.5",
-		"prettier-plugin-svelte": "^3.2.6",
-		"sv": "^0.16.2",
+		"prettier": "^3.9.4",
+		"prettier-plugin-svelte": "^4.1.1",
 		"svelte": "^5.56.4",
 		"svelte-check": "^4.7.1",
 		"tinro": "^0.6.12",
@@ -26,11 +25,11 @@
 	"dependencies": {
 		"@tauri-apps/api": "^2.11.1",
 		"@tauri-apps/plugin-opener": "^2.5.4",
-		"@types/canvas-confetti": "^1.4.2",
-		"canvas-confetti": "^1.5.1",
+		"@types/canvas-confetti": "^1.9.0",
+		"canvas-confetti": "^1.9.4",
 		"marked": "^18.0.5",
-		"svelte-hamburgers": "^4.0.1",
+		"svelte-hamburgers": "^5.0.0",
 		"sweetalert2": "^11.26.25",
-		"vanilla-tilt": "^1.7.2"
+		"vanilla-tilt": "^1.8.1"
 	}
 }
