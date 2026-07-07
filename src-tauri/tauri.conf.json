@@ -19,7 +19,7 @@
 		],
 		"shortDescription": "Automates importing images to steam screenshots"
 	},
-	"productName": "Steam Screenshot Importer",
+	"productName": "steam-screenshot-importer",
 	"mainBinaryName": "ssi",
 	"identifier": "com.yobson.ssi",
 	"app": {
