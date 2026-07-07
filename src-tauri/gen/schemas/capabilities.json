@@ -1,1 +1,1 @@
-{"default":{"identifier":"default","description":"","local":true,"windows":["*"],"permissions":["core:default","updater:default","process:default","opener:default"]}}
+{"default":{"identifier":"default","description":"","local":true,"windows":["*"],"permissions":["core:default","opener:default"]}}

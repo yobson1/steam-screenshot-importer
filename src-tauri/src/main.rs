@@ -443,8 +443,6 @@ fn main() {
     create_dir_all(cache_dir).unwrap();
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(tauri_plugin_process::init())
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             get_games,
