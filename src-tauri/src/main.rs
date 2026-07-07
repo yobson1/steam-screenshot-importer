@@ -215,6 +215,33 @@ const THUMB_WIDTH: u32 = steamworks::sys::k_ScreenshotThumbWidth as u32;
 const MAX_SIDE: u32 = 16000;
 const MAX_RESOLUTION: u32 = 26210175;
 
+#[derive(Clone, Copy)]
+struct ImportOptions {
+    app_id: u32,
+    jpeg_quality: u8,
+    filter_type: FilterType,
+}
+
+struct ImportContext<R: tauri::Runtime> {
+    window: Arc<tauri::Window<R>>,
+    cache_dir: Arc<PathBuf>,
+    client: Arc<Mutex<steamworks::Client>>,
+    screenshots_completed: Arc<AtomicF32>,
+    total_screenshots: usize,
+}
+
+impl<R: tauri::Runtime> Clone for ImportContext<R> {
+    fn clone(&self) -> Self {
+        Self {
+            window: Arc::clone(&self.window),
+            cache_dir: Arc::clone(&self.cache_dir),
+            client: Arc::clone(&self.client),
+            screenshots_completed: Arc::clone(&self.screenshots_completed),
+            total_screenshots: self.total_screenshots,
+        }
+    }
+}
+
 fn parse_filter_type(s: &str) -> FilterType {
     match s {
         "Nearest" => FilterType::Nearest,
@@ -245,42 +272,28 @@ async fn import_screenshots<R: tauri::Runtime>(
         return "No screenshots to import!".to_string();
     }
 
-    let jpeg_quality = jpeg_quality.clamp(1, 100);
-    let filter_type = parse_filter_type(&filter_type);
-
-    let cache_dir = PROJECT_DIRS.cache_dir();
+    let options = ImportOptions {
+        app_id,
+        jpeg_quality: jpeg_quality.clamp(1, 100),
+        filter_type: parse_filter_type(&filter_type),
+    };
 
     // Check if steam is running and initialize client
     let client = initialize_steam(app_id).unwrap();
 
-    // Wrap shared resources in Arc for thread-safe sharing
-    let window = Arc::new(window);
-    let cache_dir = Arc::new(cache_dir);
-    let client = Arc::new(Mutex::new(client));
-
-    // Progress bar
-    let screenshots_completed = AtomicF32::new(0.0);
+    let ctx = ImportContext {
+        window: Arc::new(window),
+        cache_dir: Arc::new(PROJECT_DIRS.cache_dir().to_path_buf()),
+        client: Arc::new(Mutex::new(client)),
+        screenshots_completed: Arc::new(AtomicF32::new(0.0)),
+        total_screenshots: num_of_files,
+    };
 
     // Process screenshots in parallel
     file_paths.par_iter().for_each(|file_path| {
-        let window = Arc::clone(&window);
-        let cache_dir = Arc::clone(&cache_dir);
-        let client = Arc::clone(&client);
-
-        import_single_screenshot(
-            file_path,
-            app_id,
-            &window,
-            &cache_dir,
-            &client,
-            &screenshots_completed,
-            num_of_files,
-            jpeg_quality,
-            filter_type,
-        );
+        let ctx = ctx.clone();
+        import_single_screenshot(file_path, &ctx, options);
     });
-
-    drop(client);
 
     info!(
         "Import of {} images complete, opening steam screenshots window",
@@ -291,9 +304,11 @@ async fn import_screenshots<R: tauri::Runtime>(
     open_steam_section(&format!("screenshots/{}", app_id));
 
     info!("Emptying cache");
-    remove_dir_all(*cache_dir)
-        .and_then(|_| create_dir(*cache_dir))
+    remove_dir_all(&*ctx.cache_dir)
+        .and_then(|_| create_dir(&*ctx.cache_dir))
         .unwrap();
+
+    drop(ctx);
 
     String::default()
 }
@@ -322,21 +337,15 @@ fn wait_for_steam(app_id: u32) -> Result<Client, String> {
 
 fn import_single_screenshot<R: tauri::Runtime>(
     file_path: &str,
-    app_id: u32,
-    window: &tauri::Window<R>,
-    cache_dir: &Path,
-    client: &Mutex<steamworks::Client>,
-    screenshots_completed: &AtomicF32,
-    total_screenshots: usize,
-    jpeg_quality: u8,
-    filter_type: FilterType,
+    ctx: &ImportContext<R>,
+    options: ImportOptions,
 ) {
     let img_path = Path::new(file_path);
     let img_name = img_path.file_stem().unwrap().to_str().unwrap();
     let extension = img_path.extension().unwrap().to_str().unwrap();
 
-    let new_file_name = format!("{}_{}.jpg", img_name, app_id);
-    let new_thumbnail_name = format!("{}_{}_thumb.jpg", img_name, app_id);
+    let new_file_name = format!("{}_{}.jpg", img_name, options.app_id);
+    let new_thumbnail_name = format!("{}_{}_thumb.jpg", img_name, options.app_id);
 
     info!("New file name: {}", new_file_name);
 
@@ -345,7 +354,7 @@ fn import_single_screenshot<R: tauri::Runtime>(
     let mut img = match ImageReader::open(file_path).unwrap().decode() {
         Ok(img) => img,
         Err(e) => {
-            window
+            ctx.window
                 .emit(ERROR_EVENT, &format!("{}.{}\n{}", img_name, extension, e))
                 .unwrap();
             error!("{}", e);
@@ -355,7 +364,7 @@ fn import_single_screenshot<R: tauri::Runtime>(
     };
 
     // Convert to jpg or downscale if needed
-    let new_img_path = cache_dir.join(&new_file_name);
+    let new_img_path = ctx.cache_dir.join(&new_file_name);
 
     if img.width() > MAX_SIDE
         || img.height() > MAX_SIDE
@@ -363,7 +372,7 @@ fn import_single_screenshot<R: tauri::Runtime>(
     {
         warn!(
             "Image {}.{} is too large to be imported, it will be downscaled with {:?} q{}",
-            img_name, extension, filter_type, jpeg_quality
+            img_name, extension, options.filter_type, options.jpeg_quality
         );
 
         let scale_factor = f32::min(
@@ -378,11 +387,10 @@ fn import_single_screenshot<R: tauri::Runtime>(
                 "Image {}.{} is too large to be imported and cannot be downscaled correctly, it will be skipped",
                 img_name, extension
             );
-
             return;
         }
 
-        img = img.resize_exact(new_width, new_height, filter_type);
+        img = img.resize_exact(new_width, new_height, options.filter_type);
 
         info!(
             "{}.{} new size: {}x{}",
@@ -393,34 +401,44 @@ fn import_single_screenshot<R: tauri::Runtime>(
     if extension != "jpg" && extension != "jpeg" {
         info!(
             "Converting image {}.{} to jpg with {:?} q{}",
-            img_name, extension, filter_type, jpeg_quality
+            img_name, extension, options.filter_type, options.jpeg_quality
         );
         let file = File::create(&new_img_path).unwrap();
         let writer = BufWriter::new(file);
-        let mut encoder = JpegEncoder::new_with_quality(writer, jpeg_quality);
+        let mut encoder = JpegEncoder::new_with_quality(writer, options.jpeg_quality);
         encoder.encode_image(&img).unwrap();
     } else {
         info!("Copying image {}.{}", img_name, extension);
         img.save(&new_img_path).unwrap();
     }
 
-    update_progress(window, screenshots_completed, total_screenshots, 0.3);
+    update_progress(
+        &ctx.window,
+        &ctx.screenshots_completed,
+        ctx.total_screenshots,
+        0.3,
+    );
 
     // Create thumbnail image
     info!(
         "Resizing image {}.{} for thumbnail with {:?} q{}",
-        img_name, extension, filter_type, jpeg_quality
+        img_name, extension, options.filter_type, options.jpeg_quality
     );
-    let thumb_img_path = cache_dir.join(&new_thumbnail_name);
+    let thumb_img_path = ctx.cache_dir.join(&new_thumbnail_name);
 
     let thumb_height = (THUMB_WIDTH * img.height()) / img.width();
-    let thumb_img = resize(&img, THUMB_WIDTH, thumb_height, filter_type);
+    let thumb_img = resize(&img, THUMB_WIDTH, thumb_height, options.filter_type);
     let file = File::create(&thumb_img_path).unwrap();
     let writer = BufWriter::new(&file);
-    let mut encoder = JpegEncoder::new_with_quality(writer, jpeg_quality);
+    let mut encoder = JpegEncoder::new_with_quality(writer, options.jpeg_quality);
     encoder.encode_image(&thumb_img).unwrap();
 
-    update_progress(window, screenshots_completed, total_screenshots, 0.4);
+    update_progress(
+        &ctx.window,
+        &ctx.screenshots_completed,
+        ctx.total_screenshots,
+        0.4,
+    );
 
     // Import screenshot
     info!(
@@ -439,11 +457,16 @@ fn import_single_screenshot<R: tauri::Runtime>(
             img.width().try_into().unwrap(),
             img.height().try_into().unwrap(),
         );
-        client.lock().unwrap().run_callbacks();
+        ctx.client.lock().unwrap().run_callbacks();
     }
     info!("Import of {}.{} complete", img_name, extension);
 
-    update_progress(window, screenshots_completed, total_screenshots, 0.3);
+    update_progress(
+        &ctx.window,
+        &ctx.screenshots_completed,
+        ctx.total_screenshots,
+        0.3,
+    );
 }
 
 fn update_progress<R: tauri::Runtime>(
