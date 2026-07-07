@@ -15,7 +15,7 @@
 			if (
 				!path.includes(menu) &&
 				!path.includes(document.getElementsByClassName('hamburger')[0]) &&
-				!path.includes(document.getElementsByClassName('swal-overlay')[0])
+				!path.includes(document.getElementsByClassName('swal2-container')[0])
 			) {
 				open = false;
 			}
