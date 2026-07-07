@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  release:
+  build:
     strategy:
       fail-fast: false
       matrix:
@@ -67,14 +67,12 @@ jobs:
           cd pkg/arch
           sudo -u builder makepkg --syncdeps --noconfirm
 
-      - name: Publish Arch release assets
+      - name: Upload Arch release asset
         if: matrix.name == 'arch'
-        uses: softprops/action-gh-release@v3
+        uses: actions/upload-artifact@v7
         with:
-          generate_release_notes: true
-          make_latest: true
-          draft: true
-          files: |
+          name: ${{ matrix.name }}
+          path: |
             pkg/arch/*.pkg.tar.zst
             pkg/arch/src/steam-screenshot-importer/src-tauri/target/release/bundle/deb/*.deb
 
@@ -122,14 +120,13 @@ jobs:
         with:
           args: --bundles appimage
 
-      - name: Publish AppImage release asset
+      - name: Upload AppImage release asset
         if: matrix.name == 'appimage'
-        uses: softprops/action-gh-release@v3
+        uses: actions/upload-artifact@v7
         with:
-          generate_release_notes: true
-          make_latest: true
-          draft: true
-          files: src-tauri/target/release/bundle/appimage/*.AppImage
+          name: ${{ matrix.name }}
+          path: |
+            src-tauri/target/release/bundle/appimage/*.AppImage
 
       # ---------------- Windows build (.msi) ----------------
 
@@ -139,11 +136,32 @@ jobs:
         with:
           args: --bundles msi
 
-      - name: Publish Windows release asset
+      - name: Upload Windows release asset
         if: matrix.name == 'windows'
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ matrix.name }}
+          path: |
+            src-tauri/target/release/bundle/msi/*.msi
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download release artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: artifacts
+
+      - name: Publish release
         uses: softprops/action-gh-release@v3
         with:
           generate_release_notes: true
           make_latest: true
           draft: false
-          files: src-tauri/target/release/bundle/msi/*.msi
+          files: |
+            artifacts/**/*.pkg.tar.zst
+            artifacts/**/*.deb
+            artifacts/**/*.AppImage
+            artifacts/**/*.msi
