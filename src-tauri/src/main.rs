@@ -25,6 +25,8 @@ use steamworks::sys::SteamAPI_IsSteamRunning as is_steam_running;
 use steamworks::sys::SteamAPI_SteamScreenshots_v003 as get_steam_screenshots;
 use steamy_vdf as vdf;
 use tauri::Emitter;
+#[cfg(not(target_os = "linux"))]
+use tauri::Wry;
 use walkdir::WalkDir;
 
 static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
@@ -491,7 +493,12 @@ fn main() {
     info!("Creating cache directory: {}", cache_dir.display());
     create_dir_all(cache_dir).unwrap();
 
-    tauri::Builder::default()
+    #[cfg(target_os = "linux")]
+    let builder = tauri::Builder::default();
+    #[cfg(not(target_os = "linux"))]
+    let builder = tauri::Builder::<tauri::Wry>::default();
+
+    builder
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             get_games,

@@ -39,7 +39,7 @@ default-features = false
 
 [target."cfg(not(target_os = \"linux\"))".dependencies.tauri]
 version = "2"
-features = ["cef"]
+features = ["wry"]
 
 [patch.crates-io.tauri]
 git = "https://github.com/tauri-apps/tauri"
