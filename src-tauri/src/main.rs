@@ -196,7 +196,7 @@ fn get_recent_steam_user() -> Result<String, String> {
 
     let mut steam_user: &str = "";
     for user in &users {
-        if let Some(recent_entry) = user.lookup("MostRecent")
+        if let Some(recent_entry) = user.lookup("AutoLogin")
             && recent_entry.to::<bool>().unwrap_or(false)
         {
             steam_user = user
