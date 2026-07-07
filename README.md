@@ -5,13 +5,11 @@ Automatic importing of screenshots into steam using the Steamworks SDK.
 
 Each image is converted to a jpeg if required, a 200xY thumbnail is created and then registered with steam. The steam screenshot management window is automatically opened to then allow easy upload to steam cloud.
 
-### 🚧 A work in progress 🚧 
-
 ## Supported image formats
 Theoretically supports all formats that the [images](https://github.com/image-rs/image) crate supports. They've not all been tested though.
 
 ## Platform support
-Currently only distributing & testing for win64 
+Currently only distributing/testing for Win64 and Arch based Linux distros
 
 ## Screenshots
 ![Screenshot](screenshots/home.png)
