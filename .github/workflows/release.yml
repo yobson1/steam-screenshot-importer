@@ -127,7 +127,9 @@ jobs:
 
       - name: Build AppImage
         if: matrix.name == 'appimage'
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v1
+        env:
+          NO_STRIP: true
         with:
           args: --bundles appimage
 
