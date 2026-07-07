@@ -1,8 +1,8 @@
 use atomic_float::AtomicF32;
 use directories::ProjectDirs;
-use image::codecs::jpeg::JpegEncoder;
-use image::imageops::{resize, FilterType};
 use image::ImageReader;
+use image::codecs::jpeg::JpegEncoder;
+use image::imageops::{FilterType, resize};
 use lazy_static::lazy_static;
 use log::{error, info, warn};
 use rayon::prelude::*;
@@ -10,19 +10,19 @@ use serde_json::Value;
 use simple_logger::SimpleLogger;
 use std::collections::HashMap;
 use std::ffi::CString;
-use std::fs::{create_dir, create_dir_all, read, remove_dir_all, File};
+use std::fs::{File, create_dir, create_dir_all, read, remove_dir_all};
 use std::io::BufWriter;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::OnceLock;
-use std::sync::{atomic::Ordering, Arc, Mutex};
+use std::sync::{Arc, Mutex, atomic::Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
 use steamlocate::{SteamApp, SteamDir};
+use steamworks::Client;
 use steamworks::sys::SteamAPI_ISteamScreenshots_AddScreenshotToLibrary as add_screenshot_to_library;
 use steamworks::sys::SteamAPI_IsSteamRunning as is_steam_running;
 use steamworks::sys::SteamAPI_SteamScreenshots_v003 as get_steam_screenshots;
-use steamworks::Client;
 use steamy_vdf as vdf;
 use tauri::Emitter;
 use walkdir::WalkDir;
@@ -196,15 +196,15 @@ fn get_recent_steam_user() -> Result<String, String> {
 
     let mut steam_user: &str = "";
     for user in &users {
-        if let Some(recent_entry) = user.lookup("MostRecent") {
-            if recent_entry.to::<bool>().unwrap_or(false) {
-                steam_user = user
-                    .lookup("PersonaName")
-                    .ok_or("Failed to get Steam username")?
-                    .as_str()
-                    .ok_or("Failed to convert Steam username to string")?;
-                break;
-            }
+        if let Some(recent_entry) = user.lookup("MostRecent")
+            && recent_entry.to::<bool>().unwrap_or(false)
+        {
+            steam_user = user
+                .lookup("PersonaName")
+                .ok_or("Failed to get Steam username")?
+                .as_str()
+                .ok_or("Failed to convert Steam username to string")?;
+            break;
         }
     }
 
