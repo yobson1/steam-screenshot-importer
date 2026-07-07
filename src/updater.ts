@@ -87,7 +87,7 @@ async function runUpdateCheck() {
 			content: { element: div },
 			icon: 'info',
 			buttons: ['Dismiss', 'Open'],
-			closeOnClickOutside: false
+			closeOnClickOutside: true
 		});
 
 		if (open) {
