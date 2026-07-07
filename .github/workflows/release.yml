@@ -70,6 +70,13 @@ jobs:
           sudo -u builder updpkgsums
           sudo -u builder makepkg --syncdeps --noconfirm
 
+      - name: Debug git
+        run: |
+          pwd
+          ls -la
+          ls -la .git
+          git rev-parse --show-toplevel
+
       - name: Commit updated PKGBUILD
         if: matrix.name == 'arch'
         run: |
