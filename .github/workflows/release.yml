@@ -72,11 +72,12 @@ jobs:
 
       - name: Commit updated PKGBUILD
         if: matrix.name == 'arch'
-        uses: stefanzweifel/git-auto-commit-action@v7
-        with:
-          commit_message: 'chore: update PKGBUILD for ${GITHUB_REF_NAME}'
-          file_pattern: pkg/arch/PKGBUILD
-          branch: master
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pkg/arch/PKGBUILD
+          git commit -m "chore: update PKGBUILD for ${GITHUB_REF_NAME}"
+          git push origin HEAD:master
 
       - name: Upload Arch release asset
         if: matrix.name == 'arch'
