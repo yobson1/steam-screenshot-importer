@@ -3,6 +3,7 @@
 	"version": "0.1.0",
 	"private": true,
 	"scripts": {
+		"fetch-steamworks": "cargo run --manifest-path src-tauri/tools/steamworks-fetcher/Cargo.toml",
 		"dev": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",

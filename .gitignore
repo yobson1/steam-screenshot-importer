@@ -1,5 +1,7 @@
 /node_modules/
 /dist/
+/src-tauri/steam_api/
+/src-tauri/tools/steamworks-fetcher/target/
 
 .DS_Store
 
