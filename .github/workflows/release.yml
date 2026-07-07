@@ -130,7 +130,7 @@ jobs:
         if: matrix.name == 'appimage'
         uses: tauri-apps/tauri-action@v1
         env:
-          NO_STRIP: '1'
+          NO_STRIP: 'true'
         with:
           args: --bundles appimage
 
