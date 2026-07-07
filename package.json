@@ -1,6 +1,6 @@
 {
 	"name": "steam-screenshot-importer",
-	"version": "0.2.1",
+	"version": "0.2.2",
 	"private": true,
 	"scripts": {
 		"fetch-steamworks": "cargo run --manifest-path src-tauri/tools/steamworks-fetcher/Cargo.toml",
