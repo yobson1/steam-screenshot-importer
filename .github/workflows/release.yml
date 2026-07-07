@@ -135,11 +135,7 @@ jobs:
 
       - name: Build AppImage
         if: matrix.name == 'appimage'
-        uses: tauri-apps/tauri-action@v1
-        env:
-          NO_STRIP: 'true'
-        with:
-          args: --bundles appimage
+        run: NO_STRIP=true pnpm tauri build --ci --bundles appimage
 
       - name: Upload AppImage release asset
         if: matrix.name == 'appimage'
