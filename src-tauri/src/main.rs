@@ -25,8 +25,6 @@ use steamworks::sys::SteamAPI_IsSteamRunning as is_steam_running;
 use steamworks::sys::SteamAPI_SteamScreenshots_v003 as get_steam_screenshots;
 use steamy_vdf as vdf;
 use tauri::Emitter;
-#[cfg(not(target_os = "linux"))]
-use tauri::Wry;
 use walkdir::WalkDir;
 
 static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
