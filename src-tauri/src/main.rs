@@ -1,4 +1,5 @@
 use atomic_float::AtomicF32;
+use base64::{Engine as _, engine::general_purpose::STANDARD_NO_PAD};
 use directories::ProjectDirs;
 use image::ImageReader;
 use image::codecs::jpeg::JpegEncoder;
@@ -113,7 +114,7 @@ fn get_games() -> Result<Vec<(u32, String, String)>, String> {
             })
             .unwrap_or_default();
 
-        let b64_img = base64::encode(img);
+        let b64_img = STANDARD_NO_PAD.encode(img);
 
         let app = apps_hash.get(&appid).unwrap().as_ref().unwrap();
 
