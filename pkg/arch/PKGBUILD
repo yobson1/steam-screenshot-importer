@@ -10,7 +10,7 @@ makedepends=('git' 'cargo' 'cargo-tauri' 'pnpm')
 depends=('cairo' 'desktop-file-utils' 'gdk-pixbuf2' 'xdg-utils' 'glib2' 'gtk3' 'hicolor-icon-theme' 'libsoup3' 'pango' 'cef')
 source=("git+${url}.git?signed#tag=v${pkgver}")
 validpgpkeys=('A41EB2986F63F6C40FCF2D03ED26A71EB8EB7A34') # Bradley (github commit signing key) <contact@yobson.xyz>
-sha256sums=('e3bd4ed2e64978a0b9ed8e362e9dab6e1cb06e38530cc3784870e143cab9799d')
+sha256sums=('9b6f31eb676d2817637be590d963c890231d54250f7e964f2a3a8a84c39718af')
 options=('!lto')
 
 prepare() {
