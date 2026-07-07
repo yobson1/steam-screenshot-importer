@@ -17,7 +17,6 @@
 			"icons/icon.icns",
 			"icons/icon.ico"
 		],
-		"resources": ["./steam_api64.dll", "./libsteam_api.so"],
 		"shortDescription": "Automates importing images to steam screenshots"
 	},
 	"productName": "Steam Screenshot Importer",
