@@ -1,11 +1,14 @@
 <script>
 	import { onMount } from 'svelte';
 	import confetti from 'canvas-confetti';
+	import { openUrl } from '@tauri-apps/plugin-opener';
 
 	let btn;
 
 	onMount(() => {
 		btn.onclick = (event) => {
+			event.preventDefault();
+
 			confetti({
 				origin: {
 					x: event.clientX / window.visualViewport.width,
@@ -16,6 +19,8 @@
 				particleCount: 100,
 				disableForReducedMotion: true
 			});
+
+			openUrl(href);
 		};
 	});
 
