@@ -9,11 +9,25 @@
 	let version;
 	let augh = new Audio('/easter/juiced.mp3');
 	augh.volume = 0.25;
+	let clickCount = 0;
+	let clickTimeout: ReturnType<typeof setTimeout>;
+
 	onMount(() => {
-		// Trigger an easter egg if the version number is clicked 6 times
-		version.onclick = (event: MouseEvent) => {
-			if (event.detail % 6 === 0) {
-				// Create image in the center of the screen
+		version.onclick = () => {
+			clickCount++;
+
+			clearTimeout(clickTimeout);
+
+			// Reset after 1 second without clicking
+			clickTimeout = setTimeout(() => {
+				clickCount = 0;
+			}, 1000);
+
+			// Trigger an easter egg if the version number is clicked 6 times
+			if (clickCount === 6) {
+				clickCount = 0;
+				clearTimeout(clickTimeout);
+
 				let img = document.createElement('img');
 				img.src = '/easter/juiced.webp';
 				img.style.position = 'absolute';
@@ -34,7 +48,11 @@
 
 				// Play sound
 				augh.loop = true;
-				augh.play();
+				augh.currentTime = 0;
+
+				augh.play().catch((err) => {
+					console.error('Audio playback failed:', err);
+				});
 
 				// Let it be disabled with a click after 3s
 				setTimeout(() => {
