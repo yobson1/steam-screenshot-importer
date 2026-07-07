@@ -22,7 +22,7 @@ jobs:
             os: ubuntu-latest
             container: archlinux:base-devel
           - name: appimage
-            os: ubuntu-latest
+            os: ubuntu-24.04
             container: ''
           - name: windows
             os: windows-latest
@@ -140,7 +140,7 @@ jobs:
 
       - name: Build AppImage
         if: matrix.name == 'appimage'
-        run: NO_STRIP=true pnpm tauri build --ci --bundles appimage
+        run: pnpm tauri build --ci --bundles appimage
 
       - name: Upload AppImage release asset
         if: matrix.name == 'appimage'
