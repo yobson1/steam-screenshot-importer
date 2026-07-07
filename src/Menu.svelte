@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { fly } from 'svelte/transition';
 	import NavButton from './NavButton.svelte';
-	import swal from 'sweetalert';
+	import Swal from 'sweetalert2';
 	import { importScreenshots } from './screenshots.js';
 	import { onMount } from 'svelte';
 
@@ -34,30 +34,29 @@
 			name: 'App ID',
 			src: 'plus-circle.svg',
 			rotate: true,
-			onclick: () => {
-				swal({
+			onclick: async () => {
+				const result = await Swal.fire({
 					title: 'Custom App ID',
-					content: {
-						element: 'input',
-						attributes: {
-							placeholder: 'Enter custom app ID'
-						}
-					}
-				}).then((appID: string) => {
-					if (appID != null) {
-						let appIDInt = parseInt(appID);
-
-						if (isNaN(appIDInt)) {
-							swal({
-								title: 'Invalid App ID',
-								text: 'Please enter a valid app ID',
-								icon: 'error'
-							});
-						} else {
-							importScreenshots(appIDInt);
-						}
-					}
+					input: 'text',
+					inputPlaceholder: 'Enter custom app ID',
+					showCancelButton: true,
+					confirmButtonText: 'Import',
+					cancelButtonText: 'Cancel'
 				});
+
+				if (result.isConfirmed && result.value != null) {
+					const appIDInt = parseInt(result.value);
+
+					if (isNaN(appIDInt)) {
+						await Swal.fire({
+							title: 'Invalid App ID',
+							text: 'Please enter a valid app ID',
+							icon: 'error'
+						});
+					} else {
+						importScreenshots(appIDInt);
+					}
+				}
 			}
 		},
 		{

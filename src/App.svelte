@@ -6,13 +6,13 @@
 	import About from './About.svelte';
 	import { Route } from 'tinro';
 	import { invoke } from '@tauri-apps/api/core';
-	import swal from 'sweetalert';
+	import Swal from 'sweetalert2';
 
 	let get_games_prom = invoke('get_games');
 	let steam_user_prom = invoke('get_recent_steam_user');
 
 	get_games_prom.catch((error) => {
-		swal('Error', error, 'error');
+		Swal.fire('Error', error, 'error');
 	});
 </script>
 

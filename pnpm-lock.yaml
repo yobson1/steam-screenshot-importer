@@ -29,9 +29,9 @@ importers:
       svelte-hamburgers:
         specifier: ^4.0.1
         version: 4.2.1(svelte@3.59.2)
-      sweetalert:
-        specifier: ^2.1.2
-        version: 2.1.2
+      sweetalert2:
+        specifier: ^11.26.25
+        version: 11.26.25
       typescript:
         specifier: ^4.6.4
         version: 4.9.5
@@ -364,9 +364,6 @@ packages:
     resolution: {integrity: sha512-reYkTUJAZb9gUuZ2RvVCNhVHdg62RHnJ7WJl8ftMi4diZ6NWlciOzQN88pUhSELEwflJht4oQDv0F0BMlwaYtA==}
     engines: {node: '>=8'}
 
-  es6-object-assign@1.1.0:
-    resolution: {integrity: sha512-MEl9uirslVwqQU369iHNWZXsI8yaZYGg/D65aOgZkeyFJwHYSxilf7rQzXKI7DdDuBPrBXbfk3sl9hJhmd5AUw==}
-
   es6-promise@3.3.1:
     resolution: {integrity: sha512-SOp9Phqvqn7jtEUxPWdWfWoLmyt2VaJ6MpvP9Comy1MceMXqE6bxvaTu4iaxpYYPzhny28Lc+M87/c2cPK6lDg==}
 
@@ -572,9 +569,6 @@ packages:
     engines: {node: '>=14'}
     hasBin: true
 
-  promise-polyfill@6.1.0:
-    resolution: {integrity: sha512-g0LWaH0gFsxovsU7R5LrrhHhWAWiHRnh1GPrhXnPgYsDkIqjRYUYSZEsej/wtleDrz5xVSIDbeKfidztp2XHFQ==}
-
   queue-microtask@1.2.3:
     resolution: {integrity: sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A==}
 
@@ -762,8 +756,8 @@ packages:
     resolution: {integrity: sha512-vzSyuGr3eEoAtT/A6bmajosJZIUWySzY2CzB3w2pgPvnkUjGqlDnsNnA0PMO+mMAhuyMul6C2uuZzY6ELSkzyA==}
     engines: {node: '>= 8'}
 
-  sweetalert@2.1.2:
-    resolution: {integrity: sha512-iWx7X4anRBNDa/a+AdTmvAzQtkN1+s4j/JJRWlHpYE8Qimkohs8/XnFcWeYHH2lMA8LRCa5tj2d244If3S/hzA==}
+  sweetalert2@11.26.25:
+    resolution: {integrity: sha512-+hunCOJdJ6FLj04T9YSLvvZXRjsvIkTeTKP2e4VF8CaBias961BTnWiSFAy7F/CM5eq3QK2Rraoc5Gzftslvkg==}
 
   terser@5.34.1:
     resolution: {integrity: sha512-FsJZ7iZLd/BXkz+4xrRTGJ26o/6VTjQytUk8b8OxkwcD2I+79VPJlz7qss1+zE7h8GNIScFqXcDyJ/KqBYZFVA==}
@@ -1057,8 +1051,6 @@ snapshots:
 
   detect-indent@6.1.0: {}
 
-  es6-object-assign@1.1.0: {}
-
   es6-promise@3.3.1: {}
 
   escape-string-regexp@1.0.5: {}
@@ -1232,8 +1224,6 @@ snapshots:
       svelte: 3.59.2
 
   prettier@3.3.3: {}
-
-  promise-polyfill@6.1.0: {}
 
   queue-microtask@1.2.3: {}
 
@@ -1414,10 +1404,7 @@ snapshots:
 
   svelte@3.59.2: {}
 
-  sweetalert@2.1.2:
-    dependencies:
-      es6-object-assign: 1.1.0
-      promise-polyfill: 6.1.0
+  sweetalert2@11.26.25: {}
 
   terser@5.34.1:
     dependencies:

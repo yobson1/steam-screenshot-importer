@@ -1,4 +1,4 @@
-import swal from 'sweetalert';
+import Swal from 'sweetalert2';
 import { marked } from 'marked';
 import { getVersion } from '@tauri-apps/api/app';
 import { openUrl } from '@tauri-apps/plugin-opener';
@@ -82,15 +82,17 @@ async function runUpdateCheck() {
 			}
 		});
 
-		const open = await swal({
+		const open = await Swal.fire({
 			title: 'Update available',
-			content: { element: div },
+			html: div,
 			icon: 'info',
-			buttons: ['Dismiss', 'Open'],
-			closeOnClickOutside: true
+			showCancelButton: true,
+			confirmButtonText: 'Open',
+			cancelButtonText: 'Dismiss',
+			allowOutsideClick: true
 		});
 
-		if (open) {
+		if (open.isConfirmed) {
 			await openUrl(manifest.url);
 		}
 	} catch (err) {

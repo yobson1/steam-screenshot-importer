@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import swal from 'sweetalert';
+import Swal from 'sweetalert2';
 import { listen } from '@tauri-apps/api/event';
 
 function sendScreenshots(paths: string[] | string, appID: number) {
@@ -11,21 +11,27 @@ let progress = 0;
 listen('screenshotImportProgress', (event) => {
 	progress = typeof event.payload === 'number' ? event.payload : progress;
 
-	swal({
-		title: 'Importing Screenshots',
-		text: `${Math.floor(progress)}%`,
-		icon: 'info',
-		closeOnClickOutside: false,
-		closeOnEsc: false,
-		buttons: [false, false],
-		content: {
-			element: 'progress',
-			attributes: {
-				value: progress,
-				max: 100
-			}
+	if (!Swal.isVisible()) {
+		Swal.fire({
+			title: 'Importing Screenshots',
+			html: `
+				<div>${Math.floor(progress)}%</div>
+				<progress value="${progress}" max="100"></progress>
+			`,
+			showConfirmButton: false,
+			allowOutsideClick: false,
+			allowEscapeKey: false
+		});
+	} else {
+		const container = Swal.getHtmlContainer();
+
+		if (container) {
+			container.innerHTML = `
+				<div>${Math.floor(progress)}%</div>
+				<progress value="${progress}" max="100"></progress>
+			`;
 		}
-	});
+	}
 
 	if (progress >= 100) {
 		progress = 0;
@@ -33,30 +39,29 @@ listen('screenshotImportProgress', (event) => {
 });
 
 listen('screenshotImportError', (event) => {
-	swal({
+	Swal.fire({
 		title: 'Import Error',
 		text: `${event.payload}`,
 		icon: 'error',
-		closeOnClickOutside: false,
-		closeOnEsc: false,
-		buttons: [false, false]
+		allowOutsideClick: false,
+		allowEscapeKey: false
 	});
 });
 
-function importScreenshots(appID) {
+function importScreenshots(appID: number) {
 	invoke('pick_screenshot_files').then((files: string[]) => {
 		if (files !== null && files.length > 0) {
-			swal({
+			Swal.fire({
 				title: 'Importing Screenshots',
 				text: 'Loading...',
-				icon: 'info',
-				closeOnClickOutside: false,
-				closeOnEsc: false,
-				buttons: [false, false]
+				showConfirmButton: false,
+				allowOutsideClick: false,
+				allowEscapeKey: false
 			});
+
 			sendScreenshots(files, appID).then((err: string) => {
 				if (err) {
-					swal({
+					Swal.fire({
 						title: 'Error',
 						text: err,
 						icon: 'error'
@@ -64,16 +69,17 @@ function importScreenshots(appID) {
 
 					console.error(err);
 				} else {
-					swal({
+					Swal.fire({
 						title: 'Success',
 						text: 'Screenshots imported',
 						icon: 'success',
-						timer: 5000
+						timer: 5000,
+						showConfirmButton: false
 					});
 				}
 			});
 		} else {
-			swal({
+			Swal.fire({
 				title: 'Error',
 				text: 'No files selected',
 				icon: 'error'

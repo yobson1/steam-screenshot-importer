@@ -8,6 +8,9 @@
 	--background-light: rgb(241, 241, 241);
 	--content-light: #333;
 
+	--accent: #ff3e00;
+	--accent-hover: #ff5117;
+
 	--body-padding: 8px;
 }
 
@@ -81,74 +84,97 @@ button:focus {
 }
 
 h1 {
-	color: #ff3e00;
+	color: var(--accent);
 	text-transform: uppercase;
 	font-size: 4em;
 	font-weight: 100;
 	margin-top: 0;
 }
 
-.swal-modal {
-	padding: 0;
-	border: 0;
+/* SweetAlert2 */
+
+.swal2-popup {
+	padding: 1.5rem;
 	border-radius: 15px;
 	background-color: var(--background-light);
+	color: var(--content-light);
 }
 
-.swal-text {
+.swal2-title {
+	color: var(--content-light);
+}
+
+.swal2-html-container {
 	color: var(--content-light);
 	text-align: center;
 	font-weight: 400;
 	font-size: 16px;
 }
 
-.swal-icon--success__hide-corners,
-.swal-icon--success:after,
-.swal-icon--success:before {
-	background-color: var(--background-light);
+.swal2-confirm {
+	background-color: var(--accent) !important;
+	color: white !important;
 }
 
-body.dark-mode .swal-icon--success__hide-corners,
-body.dark-mode .swal-icon--success:after,
-body.dark-mode .swal-icon--success:before {
-	background-color: var(--background-dark);
+.swal2-confirm:hover {
+	background-color: var(--accent-hover) !important;
 }
 
-body.dark-mode .swal-modal {
-	background-color: var(--background-dark);
+.swal2-cancel {
+	background-color: #ff0000 !important;
+	color: white !important;
 }
 
-body.dark-mode .swal-text {
-	color: var(--content-dark);
-}
-
-body.dark-mode .swal-title {
-	color: white;
-}
-
-.swal-button {
-	background-color: #ff3e00;
-	color: white;
-}
-
-.swal-button:hover {
-	background-color: #ff5117 !important;
-}
-
-.swal-button--cancel {
-	background-color: #ff0000;
-	color: white;
-}
-
-.swal-button--cancel:hover {
+.swal2-cancel:hover {
 	background-color: #fa3131 !important;
 }
 
-body.dark-mode input {
+.swal2-input {
+	border-color: #ccc;
+	background-color: white;
+	color: var(--content-light);
+}
+
+body.dark-mode .swal2-popup {
+	background-color: var(--background-dark);
+}
+
+body.dark-mode .swal2-title {
+	color: white;
+}
+
+body.dark-mode .swal2-html-container {
+	color: var(--content-dark);
+}
+
+body.dark-mode .swal2-input {
 	border-color: grey;
 	background-color: #333;
 	color: white;
 }
+
+/* Markdown release notes */
+
+.release-notes {
+	max-height: 300px;
+	overflow-y: auto;
+	text-align: left;
+}
+
+.release-notes ul,
+.release-notes ol {
+	padding-left: 1.5rem;
+}
+
+.release-notes code {
+	font-family: monospace;
+}
+
+.release-notes pre {
+	overflow-x: auto;
+}
+
+/* Scrollbars */
 
 body::-webkit-scrollbar {
 	width: 8px;
@@ -176,23 +202,4 @@ body.dark-mode::-webkit-scrollbar-thumb {
 
 body.dark-mode::-webkit-scrollbar-thumb:hover {
 	background-color: hsl(0, 0%, 40%);
-}
-
-.release-notes {
-	max-height: 300px;
-	overflow-y: auto;
-	text-align: left;
-}
-
-.release-notes ul,
-.release-notes ol {
-	padding-left: 1.5rem;
-}
-
-.release-notes code {
-	font-family: monospace;
-}
-
-.release-notes pre {
-	overflow-x: auto;
 }
