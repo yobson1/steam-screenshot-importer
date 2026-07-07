@@ -1,3 +1,8 @@
+#![cfg_attr(
+    all(not(debug_assertions), target_os = "windows"),
+    windows_subsystem = "windows"
+)]
+
 use atomic_float::AtomicF32;
 use base64::{Engine as _, engine::general_purpose::STANDARD_NO_PAD};
 use directories::ProjectDirs;
