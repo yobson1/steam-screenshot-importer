@@ -177,6 +177,13 @@ jobs:
         run: |
           vcpkg install dav1d:x64-windows
 
+      - name: Copy runtime DLLs
+        if: matrix.name == 'windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force src-tauri\target\release | Out-Null
+          Copy-Item C:\vcpkg\installed\x64-windows\bin\dav1d.dll src-tauri\target\release\
+
       - name: Build Windows installer
         if: matrix.name == 'windows'
         env:
