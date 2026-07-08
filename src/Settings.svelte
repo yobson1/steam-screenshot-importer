@@ -137,6 +137,32 @@
 
 	select {
 		width: 100%;
+		padding: 0.7rem 1rem;
+		border: 1px solid var(--text-input-border-color);
+		border-radius: 8px;
+		background-color: var(--text-input-background-color);
+		color: var(--content-color);
+		box-shadow: none;
+		cursor: pointer;
+		transition:
+			border-color var(--transition-speed),
+			box-shadow var(--transition-speed),
+			background-color var(--transition-speed);
+	}
+
+	select:hover {
+		border-color: var(--text-input-hover-border-color);
+	}
+
+	select:focus {
+		outline: none;
+		border-color: var(--accent);
+		box-shadow: 0 0 0 3px var(--text-input-focus-ring-color);
+	}
+
+	option {
+		background-color: var(--background-color);
+		color: var(--content-color);
 	}
 
 	.checkbox-label {
