@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { importScreenshots } from './screenshots';
 	import VanillaTilt from 'vanilla-tilt';
 
@@ -36,6 +36,10 @@
 			glare: true,
 			'max-glare': 0.5
 		});
+	});
+
+	onDestroy(() => {
+		(tile as any).vanillaTilt?.destroy();
 	});
 </script>
 
