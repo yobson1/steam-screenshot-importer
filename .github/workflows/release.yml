@@ -218,7 +218,7 @@ jobs:
       - name: Generate Changelog
         uses: orhun/git-cliff-action@v4
         with:
-          args: -vv --latest
+          args: -v --latest
         env:
           OUTPUT: CHANGELOG.md
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
