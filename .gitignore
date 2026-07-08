@@ -22,4 +22,4 @@ steam_api64.dll
 # Built Visual Studio Code Extensions
 *.vsix
 
-sign.sh
+.env
