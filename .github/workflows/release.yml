@@ -31,7 +31,7 @@ jobs:
     steps:
       - name: Checkout
         if: matrix.name != 'arch'
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -210,7 +210,7 @@ jobs:
           path: artifacts
 
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           fetch-tags: true
