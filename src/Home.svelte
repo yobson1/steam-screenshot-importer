@@ -151,32 +151,7 @@
 	.game-search {
 		width: 100%;
 		margin: 0;
-		padding: 0.7rem 1rem 0.7rem 2.6rem;
-		border-radius: 999px;
-		border: 1px solid var(--search-border-color);
-		background-color: var(--search-background-color);
-		color: var(--content-color);
-		font-size: 1rem;
-		box-shadow: none;
-		transition:
-			border-color var(--transition-speed),
-			box-shadow var(--transition-speed),
-			background-color var(--transition-speed);
-	}
-
-	.game-search::placeholder {
-		color: var(--content-color);
-		opacity: 0.45;
-	}
-
-	.game-search:hover {
-		border-color: var(--search-hover-border-color);
-	}
-
-	.game-search:focus {
-		outline: none;
-		border-color: var(--accent);
-		box-shadow: 0 0 0 3px rgba(255, 62, 0, 0.2);
+		padding-inline-start: 2.6rem;
 	}
 
 	.game-search:focus ~ .search-icon {

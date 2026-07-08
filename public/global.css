@@ -20,21 +20,24 @@
 	--input-border-color: light-dark(#ccc, grey);
 	--input-background-color: light-dark(white, #333);
 	--input-disabled-content-color: light-dark(#ccc, #777);
+	--text-input-background-color: light-dark(rgba(0, 0, 0, 0.03), rgba(255, 255, 255, 0.05));
+	--text-input-border-color: light-dark(rgba(128, 128, 128, 0.3), rgba(255, 255, 255, 0.12));
+	--text-input-hover-border-color: light-dark(rgba(128, 128, 128, 0.5), rgba(255, 255, 255, 0.25));
+	--text-input-focus-ring-color: rgba(255, 62, 0, 0.2);
 	--icon-color: light-dark(black, white);
 	--theme-toggle-icon: url('/moon.svg');
 	--theme-toggle-hover-background-color: light-dark(rgba(0, 0, 0, 0.15), rgba(255, 255, 255, 0.15));
 	--menu-background-color: light-dark(#eee, rgb(33, 33, 33));
 	--nav-icon-filter: none;
 	--nav-button-hover-filter: brightness(0.8);
-	--search-background-color: light-dark(rgba(0, 0, 0, 0.03), rgba(255, 255, 255, 0.05));
-	--search-border-color: light-dark(rgba(128, 128, 128, 0.3), rgba(255, 255, 255, 0.12));
-	--search-hover-border-color: light-dark(rgba(128, 128, 128, 0.5), rgba(255, 255, 255, 0.25));
 	--scrollbar-track-color: light-dark(hsl(0, 0%, 80%), hsl(0, 0%, 20%));
 	--scrollbar-thumb-color: light-dark(hsl(0, 0%, 60%), hsl(0, 0%, 30%));
 	--scrollbar-thumb-hover-color: hsl(0, 0%, 40%);
 
 	--accent: #ff3e00;
 	--accent-hover: #ff5117;
+	--danger: #ff0000;
+	--danger-hover: #fa3131;
 
 	--body-padding: 8px;
 }
@@ -128,6 +131,36 @@ input:disabled {
 	color: var(--input-disabled-content-color);
 }
 
+.game-search,
+.swal2-input {
+	padding: 0.7rem 1rem;
+	border: 1px solid var(--text-input-border-color);
+	border-radius: 999px;
+	background-color: var(--text-input-background-color);
+	color: var(--content-color);
+	font-size: 1rem;
+	box-shadow: none;
+	transition:
+		border-color var(--transition-speed),
+		box-shadow var(--transition-speed),
+		background-color var(--transition-speed);
+}
+
+:is(.game-search, .swal2-input)::placeholder {
+	color: var(--content-color);
+	opacity: 0.45;
+}
+
+:is(.game-search, .swal2-input):hover {
+	border-color: var(--text-input-hover-border-color);
+}
+
+:is(.game-search, .swal2-input):focus {
+	outline: none;
+	border-color: var(--accent);
+	box-shadow: 0 0 0 3px var(--text-input-focus-ring-color);
+}
+
 button {
 	color: var(--button-content-color);
 	background-color: var(--button-background-color);
@@ -184,18 +217,16 @@ h1 {
 }
 
 .swal2-cancel {
-	background-color: #ff0000 !important;
+	background-color: var(--danger) !important;
 	color: white !important;
 }
 
 .swal2-cancel:hover {
-	background-color: #fa3131 !important;
+	background-color: var(--danger-hover) !important;
 }
 
 .swal2-input {
-	border-color: var(--input-border-color);
-	background-color: var(--input-background-color);
-	color: var(--content-color);
+	margin-block: 1rem 0;
 }
 
 /* Markdown release notes */
