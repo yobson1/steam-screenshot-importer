@@ -10,10 +10,12 @@ export const FILTER_TYPES: FilterType[] = [
 
 const DEFAULT_QUALITY = 95;
 const DEFAULT_FILTER: FilterType = 'Lanczos3';
+const DEFAULT_CHECK_UPDATES_ON_STARTUP = true;
 
 class ScreenshotSettings {
 	jpegQuality = $state(loadQuality());
 	filterType = $state(loadFilterType());
+	checkUpdatesOnStartup = $state(loadCheckUpdatesOnStartup());
 
 	setQuality(value: number) {
 		const clamped = Math.min(100, Math.max(1, Math.round(value)));
@@ -24,6 +26,11 @@ class ScreenshotSettings {
 	setFilterType(value: FilterType) {
 		this.filterType = value;
 		localStorage.setItem('filterType', value);
+	}
+
+	setCheckUpdatesOnStartup(value: boolean) {
+		this.checkUpdatesOnStartup = value;
+		localStorage.setItem('checkUpdatesOnStartup', value.toString());
 	}
 }
 
@@ -36,6 +43,11 @@ function loadQuality(): number {
 function loadFilterType(): FilterType {
 	const stored = localStorage.getItem('filterType');
 	return FILTER_TYPES.includes(stored as FilterType) ? (stored as FilterType) : DEFAULT_FILTER;
+}
+
+function loadCheckUpdatesOnStartup(): boolean {
+	const stored = localStorage.getItem('checkUpdatesOnStartup');
+	return stored === null ? DEFAULT_CHECK_UPDATES_ON_STARTUP : stored === 'true';
 }
 
 export const screenshotSettings = new ScreenshotSettings();

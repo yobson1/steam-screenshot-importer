@@ -16,6 +16,10 @@
 	function onFilterChange(event: Event) {
 		screenshotSettings.setFilterType((event.target as HTMLSelectElement).value as FilterType);
 	}
+
+	function onCheckUpdatesChange(event: Event) {
+		screenshotSettings.setCheckUpdatesOnStartup((event.target as HTMLInputElement).checked);
+	}
 </script>
 
 <h1>Options</h1>
@@ -52,6 +56,20 @@
 			generating the thumbnail.
 		</p>
 	</fieldset>
+
+	<fieldset>
+		<legend>Updates</legend>
+
+		<label for="check-updates" class="checkbox-label">
+			<input
+				id="check-updates"
+				type="checkbox"
+				checked={screenshotSettings.checkUpdatesOnStartup}
+				onchange={onCheckUpdatesChange}
+			/>
+			Check for updates on startup
+		</label>
+	</fieldset>
 </form>
 
 <style>
@@ -66,6 +84,7 @@
 		border: 1px solid rgba(128, 128, 128, 0.3);
 		border-radius: 8px;
 		padding: 1.25rem 1.5rem 1.5rem;
+		margin-top: 1rem;
 	}
 
 	legend {
@@ -97,6 +116,20 @@
 
 	select {
 		width: 100%;
+	}
+
+	.checkbox-label {
+		display: flex;
+		justify-content: flex-start;
+		align-items: center;
+		gap: 0.5rem;
+		font-weight: 600;
+	}
+
+	.checkbox-label input[type='checkbox'] {
+		width: auto;
+		margin: 0;
+		accent-color: var(--accent);
 	}
 
 	.hint {

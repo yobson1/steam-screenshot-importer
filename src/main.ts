@@ -2,6 +2,7 @@ import { mount } from 'svelte';
 import App from './App.svelte';
 import { darkModeEnabled } from './stores.svelte';
 import runUpdateCheck from './updater';
+import { screenshotSettings } from './settings.store.svelte';
 
 function setDark(dark: boolean) {
 	document.body.classList.toggle('dark-mode', dark);
@@ -17,6 +18,8 @@ if (
 	setDark(false);
 }
 
-runUpdateCheck();
+if (screenshotSettings.checkUpdatesOnStartup) {
+	runUpdateCheck();
+}
 
 mount(App, { target: document.body });
