@@ -142,7 +142,7 @@
 		top: 50%;
 		left: 0.9rem;
 		transform: translateY(-50%);
-		color: var(--content-light);
+		color: var(--content-color);
 		opacity: 0.5;
 		pointer-events: none;
 		transition: opacity var(--transition-speed);
@@ -153,9 +153,9 @@
 		margin: 0;
 		padding: 0.7rem 1rem 0.7rem 2.6rem;
 		border-radius: 999px;
-		border: 1px solid rgba(128, 128, 128, 0.3);
-		background-color: rgba(0, 0, 0, 0.03);
-		color: var(--content-light);
+		border: 1px solid var(--search-border-color);
+		background-color: var(--search-background-color);
+		color: var(--content-color);
 		font-size: 1rem;
 		box-shadow: none;
 		transition:
@@ -165,12 +165,12 @@
 	}
 
 	.game-search::placeholder {
-		color: var(--content-light);
+		color: var(--content-color);
 		opacity: 0.45;
 	}
 
 	.game-search:hover {
-		border-color: rgba(128, 128, 128, 0.5);
+		border-color: var(--search-hover-border-color);
 	}
 
 	.game-search:focus {
@@ -189,25 +189,6 @@
 		filter: none;
 		opacity: 0.6;
 		cursor: pointer;
-	}
-
-	:global(body.dark-mode) .game-search {
-		background-color: rgba(255, 255, 255, 0.05);
-		border-color: rgba(255, 255, 255, 0.12);
-		color: var(--content-dark);
-	}
-
-	:global(body.dark-mode) .game-search::placeholder {
-		color: var(--content-dark);
-		opacity: 0.4;
-	}
-
-	:global(body.dark-mode) .game-search:hover {
-		border-color: rgba(255, 255, 255, 0.25);
-	}
-
-	:global(body.dark-mode) .search-icon {
-		color: var(--content-dark);
 	}
 
 	section.tiles {

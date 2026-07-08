@@ -1,24 +1,56 @@
 <script lang="ts">
 	import { darkModeEnabled } from './stores.svelte';
 
+	function setTheme(theme: 'light' | 'dark') {
+		darkModeEnabled.value = theme === 'dark';
+		localStorage.setItem('theme', theme);
+	}
+
 	function toggle() {
-		document.body.classList.toggle('dark-mode');
-		const isDark = document.body.classList.contains('dark-mode');
-		darkModeEnabled.value = isDark;
-		localStorage.setItem('theme', isDark ? 'dark' : 'light');
+		setTheme(darkModeEnabled.value ? 'light' : 'dark');
 	}
 </script>
 
-<button onclick={toggle} aria-label="Toggle dark mode"></button>
+<div class="theme-toggle">
+	<input
+		class="theme-light"
+		type="radio"
+		name="theme"
+		checked={!darkModeEnabled.value}
+		tabindex="-1"
+	/>
+	<input
+		class="theme-dark"
+		type="radio"
+		name="theme"
+		checked={darkModeEnabled.value}
+		tabindex="-1"
+	/>
+	<button
+		type="button"
+		onclick={toggle}
+		aria-label="Toggle dark mode"
+		aria-pressed={darkModeEnabled.value}
+	>
+		<span aria-hidden="true"></span>
+	</button>
+</div>
 
 <style>
+	.theme-toggle {
+		display: contents;
+	}
+
+	input {
+		display: none;
+	}
+
 	button {
-		background-image: url('/moon.svg');
-		background-size: cover;
 		border: none;
 		cursor: pointer;
 		height: 2rem;
 		width: 2rem;
+		padding: 0;
 		background-color: transparent;
 		color: transparent;
 		transition: background-color var(--transition-speed);
@@ -26,11 +58,14 @@
 	}
 
 	button:hover {
-		background-color: rgba(0, 0, 0, 0.5);
+		background-color: var(--theme-toggle-hover-background-color);
 	}
 
-	:global(body.dark-mode) button {
-		background-image: url('/sun.svg');
-		filter: invert();
+	span {
+		display: block;
+		width: 100%;
+		height: 100%;
+		background-color: var(--icon-color);
+		mask: var(--theme-toggle-icon) center / cover no-repeat;
 	}
 </style>

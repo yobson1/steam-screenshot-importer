@@ -24,14 +24,15 @@
 		font-weight: 600;
 		width: 64px;
 		height: 64px;
-		background-color: white;
-		color: black;
+		background-color: var(--button-background-color);
+		color: var(--button-content-color);
 		border-radius: 8px;
 		box-shadow: 0 0 3px 2px rgba(0, 0, 0, 0.25);
 		transition: filter 200ms ease-in-out;
 	}
 
 	img {
+		filter: var(--nav-icon-filter);
 		transition: transform 750ms ease;
 	}
 
@@ -41,7 +42,7 @@
 	}
 
 	button:hover {
-		filter: brightness(0.8);
+		filter: var(--nav-button-hover-filter);
 	}
 
 	button:hover img.rotate {
@@ -54,18 +55,5 @@
 
 	button:active .img-container {
 		transform: scale(0.85);
-	}
-
-	:global(body.dark-mode) img {
-		filter: invert();
-	}
-
-	:global(body.dark-mode) button {
-		background-color: rgb(41, 41, 41);
-		color: white;
-	}
-
-	:global(body.dark-mode) button:hover {
-		filter: brightness(1.2);
 	}
 </style>

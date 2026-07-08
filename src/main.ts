@@ -4,19 +4,17 @@ import { darkModeEnabled } from './stores.svelte';
 import runUpdateCheck from './updater';
 import { screenshotSettings } from './settings.store.svelte';
 
-function setDark(dark: boolean) {
-	document.body.classList.toggle('dark-mode', dark);
-	darkModeEnabled.value = dark;
-	localStorage.setItem('theme', dark ? 'dark' : 'light');
+function getPreferredTheme() {
+	const storedTheme = localStorage.getItem('theme');
+
+	if (storedTheme === 'light' || storedTheme === 'dark') {
+		return storedTheme;
+	}
+
+	return window.matchMedia?.('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
 }
 
-if (
-	localStorage.getItem('theme') == 'light' ||
-	(localStorage.getItem('theme') === null &&
-		window.matchMedia?.('(prefers-color-scheme: light)').matches)
-) {
-	setDark(false);
-}
+darkModeEnabled.value = getPreferredTheme() === 'dark';
 
 if (screenshotSettings.checkUpdatesOnStartup) {
 	runUpdateCheck();

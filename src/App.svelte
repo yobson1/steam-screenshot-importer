@@ -23,17 +23,7 @@
 
 <style>
 	:global(body) {
-		background-color: var(--background-light);
-		color: var(--content-light);
-		transition:
-			background-color var(--transition-speed),
-			color var(--transition-speed);
 		padding-top: 0;
-	}
-
-	:global(body.dark-mode) {
-		background-color: var(--background-dark);
-		color: var(--content-dark);
 	}
 
 	main {

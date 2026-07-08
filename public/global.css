@@ -1,5 +1,6 @@
 /* set css vars */
 :root {
+	color-scheme: light dark;
 	--transition-speed: 0.3s;
 
 	--background-dark: #222;
@@ -7,11 +8,46 @@
 
 	--background-light: rgb(241, 241, 241);
 	--content-light: #333;
+	--background-color: light-dark(var(--background-light), var(--background-dark));
+	--content-color: light-dark(var(--content-light), var(--content-dark));
+	--link-color: light-dark(rgb(0, 100, 200), rgb(127, 179, 255));
+	--link-visited-color: light-dark(rgb(0, 80, 160), rgb(175, 145, 255));
+	--button-background-color: light-dark(#f4f4f4, rgb(41, 41, 41));
+	--button-background-active-color: light-dark(#ddd, rgb(55, 55, 55));
+	--button-content-color: light-dark(#333, white);
+	--button-disabled-content-color: light-dark(#999, #777);
+	--button-focus-border-color: light-dark(#666, #aaa);
+	--input-border-color: light-dark(#ccc, grey);
+	--input-background-color: light-dark(white, #333);
+	--input-disabled-content-color: light-dark(#ccc, #777);
+	--icon-color: light-dark(black, white);
+	--theme-toggle-icon: url('/moon.svg');
+	--theme-toggle-hover-background-color: light-dark(rgba(0, 0, 0, 0.15), rgba(255, 255, 255, 0.15));
+	--menu-background-color: light-dark(#eee, rgb(33, 33, 33));
+	--nav-icon-filter: none;
+	--nav-button-hover-filter: brightness(0.8);
+	--search-background-color: light-dark(rgba(0, 0, 0, 0.03), rgba(255, 255, 255, 0.05));
+	--search-border-color: light-dark(rgba(128, 128, 128, 0.3), rgba(255, 255, 255, 0.12));
+	--search-hover-border-color: light-dark(rgba(128, 128, 128, 0.5), rgba(255, 255, 255, 0.25));
+	--scrollbar-track-color: light-dark(hsl(0, 0%, 80%), hsl(0, 0%, 20%));
+	--scrollbar-thumb-color: light-dark(hsl(0, 0%, 60%), hsl(0, 0%, 30%));
+	--scrollbar-thumb-hover-color: hsl(0, 0%, 40%);
 
 	--accent: #ff3e00;
 	--accent-hover: #ff5117;
 
 	--body-padding: 8px;
+}
+
+:root:has(.theme-light:checked) {
+	color-scheme: light;
+}
+
+:root:has(.theme-dark:checked) {
+	color-scheme: dark;
+	--theme-toggle-icon: url('/sun.svg');
+	--nav-icon-filter: invert();
+	--nav-button-hover-filter: brightness(1.2);
 }
 
 html,
@@ -22,17 +58,21 @@ body {
 }
 
 body {
-	color: var(--content-light);
+	background-color: var(--background-color);
+	color: var(--content-color);
 	margin: 0;
 	padding: var(--body-padding);
 	box-sizing: border-box;
 	font-family:
 		-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell,
 		'Helvetica Neue', sans-serif;
+	transition:
+		background-color var(--transition-speed),
+		color var(--transition-speed);
 }
 
 a {
-	color: rgb(0, 100, 200);
+	color: var(--link-color);
 	text-decoration: none;
 }
 
@@ -41,7 +81,7 @@ a:hover {
 }
 
 a:visited {
-	color: rgb(0, 80, 160);
+	color: var(--link-visited-color);
 }
 
 label {
@@ -58,7 +98,7 @@ textarea {
 	padding: 0.4em;
 	margin: 0 0 0.5em;
 	box-sizing: border-box;
-	border: 1px solid #ccc;
+	border: 1px solid var(--input-border-color);
 	border-radius: 2px;
 }
 
@@ -85,25 +125,25 @@ textarea {
 }
 
 input:disabled {
-	color: #ccc;
+	color: var(--input-disabled-content-color);
 }
 
 button {
-	color: #333;
-	background-color: #f4f4f4;
+	color: var(--button-content-color);
+	background-color: var(--button-background-color);
 	outline: none;
 }
 
 button:disabled {
-	color: #999;
+	color: var(--button-disabled-content-color);
 }
 
 button:not(:disabled):active {
-	background-color: #ddd;
+	background-color: var(--button-background-active-color);
 }
 
 button:focus {
-	border-color: #666;
+	border-color: var(--button-focus-border-color);
 }
 
 h1 {
@@ -119,16 +159,16 @@ h1 {
 .swal2-popup {
 	padding: 1.5rem;
 	border-radius: 15px;
-	background-color: var(--background-light);
-	color: var(--content-light);
+	background-color: var(--background-color);
+	color: var(--content-color);
 }
 
 .swal2-title {
-	color: var(--content-light);
+	color: var(--content-color);
 }
 
 .swal2-html-container {
-	color: var(--content-light);
+	color: var(--content-color);
 	text-align: center;
 	font-weight: 400;
 	font-size: 16px;
@@ -153,27 +193,9 @@ h1 {
 }
 
 .swal2-input {
-	border-color: #ccc;
-	background-color: white;
-	color: var(--content-light);
-}
-
-body.dark-mode .swal2-popup {
-	background-color: var(--background-dark);
-}
-
-body.dark-mode .swal2-title {
-	color: white;
-}
-
-body.dark-mode .swal2-html-container {
-	color: var(--content-dark);
-}
-
-body.dark-mode .swal2-input {
-	border-color: grey;
-	background-color: #333;
-	color: white;
+	border-color: var(--input-border-color);
+	background-color: var(--input-background-color);
+	color: var(--content-color);
 }
 
 /* Markdown release notes */
@@ -204,25 +226,13 @@ body::-webkit-scrollbar {
 }
 
 body::-webkit-scrollbar-track {
-	background-color: hsl(0, 0%, 80%);
+	background-color: var(--scrollbar-track-color);
 }
 
 body::-webkit-scrollbar-thumb {
-	background-color: hsl(0, 0%, 60%);
+	background-color: var(--scrollbar-thumb-color);
 }
 
 body::-webkit-scrollbar-thumb:hover {
-	background-color: hsl(0, 0%, 40%);
-}
-
-body.dark-mode::-webkit-scrollbar-track {
-	background-color: hsl(0, 0%, 20%);
-}
-
-body.dark-mode::-webkit-scrollbar-thumb {
-	background-color: hsl(0, 0%, 30%);
-}
-
-body.dark-mode::-webkit-scrollbar-thumb:hover {
-	background-color: hsl(0, 0%, 40%);
+	background-color: var(--scrollbar-thumb-hover-color);
 }

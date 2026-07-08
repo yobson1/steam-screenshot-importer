@@ -83,16 +83,11 @@
 		letter-spacing: 0.15rem;
 		height: 100vh;
 		position: absolute;
-		background-color: #eee;
-		color: var(--content-light);
+		background-color: var(--menu-background-color);
+		color: var(--content-color);
 		transition: none 525ms ease-in-out;
 		transition-property: box-shadow, left;
 		overflow: auto;
-	}
-
-	:global(body.dark-mode) .menu {
-		background-color: rgba(33, 33, 33, 1);
-		color: var(--content-dark);
 	}
 
 	p {
