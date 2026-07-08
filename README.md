@@ -11,7 +11,7 @@ Each image is converted to a jpeg if required, a 200xY thumbnail is created and 
 ### Arch based Linux distros
 A built pacman package & AUR package are available for installation.
 
-#### Binary package
+#### Binary release
 - Download the latest `.pkg.tar.zst` file from the [releases](../../releases) page
 - Install using `pacman -U <path_to_file>`
 
