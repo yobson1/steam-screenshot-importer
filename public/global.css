@@ -42,11 +42,11 @@
 	--body-padding: 8px;
 }
 
-:root:has(.theme-light:checked) {
+:root[data-theme='light'] {
 	color-scheme: light;
 }
 
-:root:has(.theme-dark:checked) {
+:root[data-theme='dark'] {
 	color-scheme: dark;
 	--theme-toggle-icon: url('/sun.svg');
 	--nav-icon-filter: invert();

@@ -1,50 +1,21 @@
 <script lang="ts">
 	import { darkModeEnabled } from './stores.svelte';
 
-	function setTheme(theme: 'light' | 'dark') {
-		darkModeEnabled.value = theme === 'dark';
-		localStorage.setItem('theme', theme);
-	}
-
 	function toggle() {
-		setTheme(darkModeEnabled.value ? 'light' : 'dark');
+		darkModeEnabled.setTheme(darkModeEnabled.value ? 'light' : 'dark');
 	}
 </script>
 
-<div class="theme-toggle">
-	<input
-		class="theme-light"
-		type="radio"
-		name="theme"
-		checked={!darkModeEnabled.value}
-		tabindex="-1"
-	/>
-	<input
-		class="theme-dark"
-		type="radio"
-		name="theme"
-		checked={darkModeEnabled.value}
-		tabindex="-1"
-	/>
-	<button
-		type="button"
-		onclick={toggle}
-		aria-label="Toggle dark mode"
-		aria-pressed={darkModeEnabled.value}
-	>
-		<span aria-hidden="true"></span>
-	</button>
-</div>
+<button
+	type="button"
+	onclick={toggle}
+	aria-label="Toggle dark mode"
+	aria-pressed={darkModeEnabled.value}
+>
+	<span aria-hidden="true"></span>
+</button>
 
 <style>
-	.theme-toggle {
-		display: contents;
-	}
-
-	input {
-		display: none;
-	}
-
 	button {
 		border: none;
 		cursor: pointer;
