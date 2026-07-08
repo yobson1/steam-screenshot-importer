@@ -2,7 +2,6 @@
 	import ImgLink from './ImgLink.svelte';
 	import { darkModeEnabled } from './stores.svelte';
 	import { getVersion } from '@tauri-apps/api/app';
-	import { onMount } from 'svelte';
 
 	let versionProm = getVersion();
 
@@ -12,65 +11,65 @@
 	let clickCount = 0;
 	let clickTimeout: ReturnType<typeof setTimeout>;
 
-	onMount(() => {
-		version.onclick = () => {
-			clickCount++;
+	function handleVersionClick() {
+		clickCount++;
 
+		clearTimeout(clickTimeout);
+
+		// Reset after 1 second without clicking
+		clickTimeout = setTimeout(() => {
+			clickCount = 0;
+		}, 1000);
+
+		// Trigger an easter egg if the version number is clicked 6 times
+		if (clickCount === 6) {
+			clickCount = 0;
 			clearTimeout(clickTimeout);
 
-			// Reset after 1 second without clicking
-			clickTimeout = setTimeout(() => {
-				clickCount = 0;
-			}, 1000);
+			let img = document.createElement('img');
+			img.src = '/easter/juiced.webp';
+			img.style.position = 'absolute';
+			img.style.top = '50%';
+			img.style.left = '50%';
+			img.style.transform = 'translate(-50%, -50%)';
+			img.style.width = '100%';
+			img.style.height = '100%';
+			img.style.zIndex = '5';
+			document.body.appendChild(img);
 
-			// Trigger an easter egg if the version number is clicked 6 times
-			if (clickCount === 6) {
-				clickCount = 0;
-				clearTimeout(clickTimeout);
+			// Disable scrolling
+			let oldOverflow = document.body.style.overflow;
+			document.body.style.overflow = 'hidden';
 
-				let img = document.createElement('img');
-				img.src = '/easter/juiced.webp';
-				img.style.position = 'absolute';
-				img.style.top = '50%';
-				img.style.left = '50%';
-				img.style.transform = 'translate(-50%, -50%)';
-				img.style.width = '100%';
-				img.style.height = '100%';
-				img.style.zIndex = '5';
-				document.body.appendChild(img);
+			// Scroll to the top
+			window.scrollTo(0, 0);
 
-				// Disable scrolling
-				let oldOverflow = document.body.style.overflow;
-				document.body.style.overflow = 'hidden';
+			// Play sound
+			augh.loop = true;
+			augh.currentTime = 0;
 
-				// Scroll to the top
-				window.scrollTo(0, 0);
+			augh.play().catch((err) => {
+				console.error('Audio playback failed:', err);
+			});
 
-				// Play sound
-				augh.loop = true;
-				augh.currentTime = 0;
-
-				augh.play().catch((err) => {
-					console.error('Audio playback failed:', err);
-				});
-
-				// Let it be disabled with a click after 3s
-				setTimeout(() => {
-					img.onclick = () => {
-						document.body.style.overflow = oldOverflow;
-						img.remove();
-						augh.pause();
-						augh.currentTime = 0;
-					};
-				}, 3000);
-			}
-		};
-	});
+			// Let it be disabled with a click after 3s
+			setTimeout(() => {
+				img.onclick = () => {
+					document.body.style.overflow = oldOverflow;
+					img.remove();
+					augh.pause();
+					augh.currentTime = 0;
+				};
+			}, 3000);
+		}
+	}
 </script>
 
 <footer>
 	<nav class="left">
-		<p class="version" bind:this={version}>
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+		<p class="version" bind:this={version} onclick={handleVersionClick}>
 			{#await versionProm then appVersion}
 				v{appVersion}
 			{/await}

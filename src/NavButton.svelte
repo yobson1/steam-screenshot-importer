@@ -1,17 +1,11 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import type { MenuButton } from './types';
 
 	let { name, href, src, rotate, onclick = () => {} }: MenuButton = $props();
-
-	let btn: HTMLButtonElement;
-	onMount(() => {
-		btn.onclick = onclick;
-	});
 </script>
 
 <a href={href ? '#' + href : undefined}>
-	<button bind:this={btn}>
+	<button {onclick}>
 		<span class="img-container">
 			<img class={rotate ? 'rotate' : ''} {src} alt={name} />
 		</span>
