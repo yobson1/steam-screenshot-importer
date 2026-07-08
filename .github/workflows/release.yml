@@ -215,6 +215,11 @@ jobs:
         with:
           path: artifacts
 
+      - name: Install typos
+        uses: taiki-e/install-action@v2
+        with:
+          tool: typos
+
       - name: Generate Changelog
         uses: orhun/git-cliff-action@v4
         with:
