@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { screenshotSettings, FILTER_TYPES, type FilterType } from './settings.store.svelte';
+	import runUpdateCheck from './updater';
 
 	const filterLabels: Record<FilterType, string> = {
 		Nearest: 'Nearest Neighbor: fastest, blockiest',
@@ -8,6 +9,8 @@
 		Gaussian: 'Gaussian',
 		Lanczos3: 'Lanczos3: best quality, slowest'
 	};
+
+	let checkingForUpdates = $state(false);
 
 	function onQualityInput(event: Event) {
 		screenshotSettings.setQuality(Number((event.target as HTMLInputElement).value));
@@ -19,6 +22,15 @@
 
 	function onCheckUpdatesChange(event: Event) {
 		screenshotSettings.setCheckUpdatesOnStartup((event.target as HTMLInputElement).checked);
+	}
+
+	async function handleCheckForUpdates() {
+		checkingForUpdates = true;
+		try {
+			await runUpdateCheck(true);
+		} finally {
+			checkingForUpdates = false;
+		}
 	}
 </script>
 
@@ -69,6 +81,15 @@
 			/>
 			Check for updates on startup
 		</label>
+
+		<button
+			type="button"
+			class="btn-accent check-updates-btn"
+			onclick={handleCheckForUpdates}
+			disabled={checkingForUpdates}
+		>
+			{checkingForUpdates ? 'Checking…' : 'Check for updates now'}
+		</button>
 	</fieldset>
 </form>
 
@@ -130,6 +151,11 @@
 		width: auto;
 		margin: 0;
 		accent-color: var(--accent);
+	}
+
+	.check-updates-btn {
+		margin-top: 1rem;
+		width: 100%;
 	}
 
 	.hint {

@@ -56,11 +56,22 @@ export async function check(): Promise<UpdateResult> {
 	};
 }
 
-async function runUpdateCheck() {
+async function runUpdateCheck(manual = false) {
 	try {
 		const { shouldUpdate, manifest } = await check();
 
-		if (!shouldUpdate) return;
+		if (!shouldUpdate) {
+			if (manual) {
+				await Swal.fire({
+					title: 'No updates available',
+					text: "You're on the latest version.",
+					icon: 'success',
+					timer: 3000,
+					showConfirmButton: false
+				});
+			}
+			return;
+		}
 
 		const div = document.createElement('div');
 		div.className = 'release-notes';
@@ -97,6 +108,14 @@ async function runUpdateCheck() {
 		}
 	} catch (err) {
 		console.error('Failed to check for updates:', err);
+
+		if (manual) {
+			await Swal.fire({
+				title: 'Update check failed',
+				text: 'Could not check for updates. Please try again later.',
+				icon: 'error'
+			});
+		}
 	}
 }
 
