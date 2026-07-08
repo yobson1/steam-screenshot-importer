@@ -237,6 +237,43 @@ jobs:
           commit_message: '${{ github.ref_name }}'
           updpkgsums: false
 
+      - name: Append checksums to release notes
+        run: |
+          mapfile -d '' files < <(
+            find artifacts -type f \
+              \( -name '*.pkg.tar.zst' -o -name '*.deb' -o -name '*.AppImage' -o -name '*.msi' \) \
+              -print0 | sort -z
+          )
+
+          {
+            echo
+            echo "<details>"
+            echo "<summary><strong>Checksums</strong></summary> "
+            echo
+
+            if (( ${#files[@]} == 0 )); then
+              echo "No release assets found."
+            else
+              for algo in b2 sha512 sha384 sha256 sha224 sha1 md5; do
+                cmd="${algo}sum"
+
+                echo "### ${algo}"
+                echo
+
+                for file in "${files[@]}"; do
+                  filename="$(basename "$file")"
+                  hash="$("$cmd" "$file" | awk '{print $1}')"
+
+                  printf -- '- `%s`: `%s`\n' "$filename" "$hash"
+                done
+
+                echo
+              done
+            fi
+
+            echo "</details>"
+          } >> CHANGELOG.md
+
       - name: Publish release
         uses: softprops/action-gh-release@v3
         with:
