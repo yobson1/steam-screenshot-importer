@@ -30,7 +30,6 @@ jobs:
     container: ${{ matrix.container }}
     steps:
       - name: Checkout
-        if: matrix.name != 'arch'
         uses: actions/checkout@v7
         with:
           fetch-depth: 0
@@ -48,17 +47,6 @@ jobs:
             git gnupg zstd cargo cargo-tauri pnpm nodejs npm \
             cairo desktop-file-utils gdk-pixbuf2 xdg-utils glib2 gtk3 \
             hicolor-icon-theme libsoup3 pango cef pacman-contrib
-
-      # using the checkout action in the container is weird
-      - name: Checkout
-        if: matrix.name == 'arch'
-        run: |
-          git config --global init.defaultBranch master
-          git config --global --add safe.directory $(pwd)
-          git init
-          git remote add origin https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
-          git fetch origin ${{ github.ref }}
-          git checkout ${{ github.sha }}
 
       - name: Create unprivileged build user
         if: matrix.name == 'arch'
@@ -78,17 +66,16 @@ jobs:
           cd pkg/arch
           version="${GITHUB_REF_NAME#v}"
           sed -i "s/^pkgver=.*/pkgver=${version}/" PKGBUILD
+          sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
           sudo -u builder updpkgsums
           sudo -u builder makepkg --syncdeps --noconfirm
 
-      - name: Commit updated PKGBUILD
+      - name: Upload PKGBUILD artifact
         if: matrix.name == 'arch'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add pkg/arch/PKGBUILD
-          git commit -m "chore(pkg): update PKGBUILD for ${GITHUB_REF_NAME}"
-          git push origin HEAD:master
+        uses: actions/upload-artifact@v7
+        with:
+          name: aur-pkgbuild
+          path: pkg/arch/PKGBUILD
 
       - name: Upload Arch release asset
         if: matrix.name == 'arch'
@@ -227,6 +214,28 @@ jobs:
         env:
           OUTPUT: CHANGELOG.md
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Copy PKGBUILD to repo
+        run: |
+          cp artifacts/aur-pkgbuild/PKGBUILD pkg/arch/PKGBUILD
+
+      - name: Commit updated PKGBUILD
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: 'chore(pkg): update PKGBUILD for ${{ github.ref_name }}'
+          file_pattern: 'pkg/arch/PKGBUILD'
+          branch: master
+
+      - name: Publish to AUR
+        uses: KSXGitHub/github-actions-deploy-aur@da03e160361ce01bf087e790b6ffd196d7dccff7
+        with:
+          pkgname: ${{ github.event.repository.name }}
+          pkgbuild: pkg/arch/PKGBUILD
+          commit_username: GitHub Actions
+          commit_email: github-actions@github.com
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: '${{ github.ref_name }}'
+          updpkgsums: false
 
       - name: Publish release
         uses: softprops/action-gh-release@v3
