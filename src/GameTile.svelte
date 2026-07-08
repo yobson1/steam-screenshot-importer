@@ -6,7 +6,24 @@
 	let { imgSrc, appID, appName }: { imgSrc?: string; appID: number; appName: string } = $props();
 
 	let tile: HTMLDivElement;
-	let img: HTMLImageElement;
+
+	function handleImgErr(e: Event) {
+		const img = e.currentTarget as HTMLImageElement;
+		img.src = 'defaultappimage.png';
+		const title = tile.querySelector('span');
+		if (title) title.style.visibility = 'visible';
+	}
+
+	function handleActivate() {
+		importScreenshots(appID);
+	}
+
+	function handleKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter' || e.key === ' ') {
+			e.preventDefault();
+			handleActivate();
+		}
+	}
 
 	onMount(() => {
 		VanillaTilt.init(tile, {
@@ -19,19 +36,18 @@
 			glare: true,
 			'max-glare': 0.5
 		});
-
-		tile.onclick = () => importScreenshots(appID);
-
-		img.onerror = () => {
-			img.src = 'defaultappimage.png';
-			const title = tile.querySelector('span');
-			if (title) title.style.visibility = 'visible';
-		};
 	});
 </script>
 
-<div bind:this={tile}>
-	<img bind:this={img} src={imgSrc} alt={appName} />
+<div
+	bind:this={tile}
+	role="button"
+	tabindex="0"
+	aria-label="Import screenshots for {appName}"
+	onclick={handleActivate}
+	onkeydown={handleKeydown}
+>
+	<img src={imgSrc} alt={appName} onerror={handleImgErr} />
 	<span class="no-img-title">{appName}</span>
 </div>
 
