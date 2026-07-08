@@ -23,7 +23,7 @@
 	--text-input-background-color: light-dark(rgba(0, 0, 0, 0.03), rgba(255, 255, 255, 0.05));
 	--text-input-border-color: light-dark(rgba(128, 128, 128, 0.3), rgba(255, 255, 255, 0.12));
 	--text-input-hover-border-color: light-dark(rgba(128, 128, 128, 0.5), rgba(255, 255, 255, 0.25));
-	--text-input-focus-ring-color: rgba(255, 62, 0, 0.2);
+	--text-input-focus-ring-color: color-mix(in srgb, var(--accent) 25%, transparent);
 	--icon-color: light-dark(black, white);
 	--theme-toggle-icon: url('/moon.svg');
 	--theme-toggle-hover-background-color: light-dark(rgba(0, 0, 0, 0.15), rgba(255, 255, 255, 0.15));
@@ -34,10 +34,10 @@
 	--scrollbar-thumb-color: light-dark(hsl(0, 0%, 60%), hsl(0, 0%, 30%));
 	--scrollbar-thumb-hover-color: hsl(0, 0%, 40%);
 
-	--accent: #ff3e00;
-	--accent-hover: #ff5117;
-	--danger: #ff0000;
-	--danger-hover: #fa3131;
+	--accent: #d85a32;
+	--accent-hover: #e06a42;
+	--danger: #c84a4a;
+	--danger-hover: #d45a5a;
 
 	--body-padding: 8px;
 }
