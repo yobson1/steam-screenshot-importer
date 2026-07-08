@@ -121,7 +121,8 @@ fn get_games() -> Result<Vec<(u32, String, String)>, String> {
         })
         .flatten()
         .collect();
-    let apps: Vec<u32> = apps_hash.keys().cloned().collect();
+    let mut apps: Vec<u32> = apps_hash.keys().cloned().collect();
+    apps.sort_unstable();
     let steam_path = steam_dir.path();
 
     let mut imgs: Vec<(u32, String, String)> = vec![];
