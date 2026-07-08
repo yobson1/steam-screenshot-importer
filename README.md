@@ -6,13 +6,13 @@ Each image is converted to a jpeg if required, a 200xY thumbnail is created and 
 ## Usage
 
 ### Windows
-- Download & run the `msi` installer from the latest [release](/releases)
+- Download & run the `msi` installer from the latest [release](../../releases)
 
 ### Arch based Linux distros
 A built pacman package & AUR package are available for installation.
 
 #### Binary package
-- Download the latest `.pkg.tar.zst` file from the [releases](/releases) page
+- Download the latest `.pkg.tar.zst` file from the [releases](../../releases) page
 - Install using `pacman -U <path_to_file>`
 
 #### AUR package
@@ -29,7 +29,7 @@ $ makepkg -si
 The same PKGBUILD is also available here in the main repo: [PKGBUILD](/pkg/arch/PKGBUILD)
 
 ### Other Linux distros
-- Download the latest AppImage from the [releases](/releases) page
+- Download the latest AppImage from the [releases](../../releases) page
 - Make the file executable and run it
 ```bash
 $ chmod +x steam-screenshot-importer-<version>-x86_64.AppImage
