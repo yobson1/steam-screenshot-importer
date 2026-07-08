@@ -209,12 +209,19 @@ jobs:
         with:
           path: artifacts
 
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
       - name: Generate Changelog
         uses: orhun/git-cliff-action@v4
         with:
           args: -vv --latest
         env:
           OUTPUT: CHANGELOG.md
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish release
         uses: softprops/action-gh-release@v3
