@@ -215,28 +215,6 @@ jobs:
           OUTPUT: CHANGELOG.md
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Copy PKGBUILD to repo
-        run: |
-          cp artifacts/aur-pkgbuild/PKGBUILD pkg/arch/PKGBUILD
-
-      - name: Commit updated PKGBUILD
-        uses: stefanzweifel/git-auto-commit-action@v7
-        with:
-          commit_message: 'chore(pkg): update PKGBUILD for ${{ github.ref_name }}'
-          file_pattern: 'pkg/arch/PKGBUILD'
-          branch: master
-
-      - name: Publish to AUR
-        uses: KSXGitHub/github-actions-deploy-aur@da03e160361ce01bf087e790b6ffd196d7dccff7
-        with:
-          pkgname: ${{ github.event.repository.name }}
-          pkgbuild: pkg/arch/PKGBUILD
-          commit_username: GitHub Actions
-          commit_email: github-actions@github.com
-          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
-          commit_message: '${{ github.ref_name }}'
-          updpkgsums: false
-
       - name: Append checksums to release notes
         run: |
           mapfile -d '' files < <(
@@ -273,6 +251,28 @@ jobs:
 
             echo "</details>"
           } >> CHANGELOG.md
+
+      - name: Copy PKGBUILD to repo
+        run: |
+          cp artifacts/aur-pkgbuild/PKGBUILD pkg/arch/PKGBUILD
+
+      - name: Commit updated PKGBUILD
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: 'chore(pkg): update PKGBUILD for ${{ github.ref_name }}'
+          file_pattern: 'pkg/arch/PKGBUILD'
+          branch: master
+
+      - name: Publish to AUR
+        uses: KSXGitHub/github-actions-deploy-aur@da03e160361ce01bf087e790b6ffd196d7dccff7
+        with:
+          pkgname: ${{ github.event.repository.name }}
+          pkgbuild: pkg/arch/PKGBUILD
+          commit_username: GitHub Actions
+          commit_email: github-actions@github.com
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: '${{ github.ref_name }}'
+          updpkgsums: false
 
       - name: Publish release
         uses: softprops/action-gh-release@v3
