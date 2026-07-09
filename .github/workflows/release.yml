@@ -45,7 +45,7 @@ jobs:
         if: matrix.name != 'windows'
         run: |
           pacman -Syu --noconfirm --needed \
-            git gnupg zstd cargo cargo-tauri pnpm nodejs npm \
+            git gnupg zstd cargo cargo-tauri pnpm nodejs npm patchelf \
             cairo desktop-file-utils gdk-pixbuf2 xdg-utils glib2 gtk3 \
             hicolor-icon-theme libsoup3 pango cef pacman-contrib jaq nss
 
