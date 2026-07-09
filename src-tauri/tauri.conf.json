@@ -17,7 +17,7 @@
 			"icons/icon.icns",
 			"icons/icon.ico"
 		],
-		"shortDescription": "Automates importing images to steam screenshots",
+		"shortDescription": "Automatic importing of screenshots into Steam using the Steamworks SDK",
 		"linux": {
 			"deb": {
 				"desktopTemplate": "template.desktop"

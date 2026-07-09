@@ -9,7 +9,7 @@
 [![Tauri Badge](https://img.shields.io/badge/built_with-Tauri-24C8D8?logo=tauri)](https://tauri.app)
 [![Svelte Badge](https://img.shields.io/badge/built_with-Svelte-FF3E00?logo=svelte)](https://svelte.dev)
 
-Automatic importing of screenshots into Steam using the Steamworks SDK.
+Automatic importing of screenshots into Steam using the Steamworks SDK
 
 </div>
 

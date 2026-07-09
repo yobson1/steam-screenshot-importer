@@ -1,6 +1,6 @@
 # Maintainer: yobson <aur@yobson.xyz>
 pkgname=steam-screenshot-importer
-pkgdesc='Automates importing images to steam screenshots'
+pkgdesc='Automatic importing of screenshots into Steam using the Steamworks SDK'
 pkgver=0.4.0
 pkgrel=1
 arch=('any')
