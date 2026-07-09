@@ -1,5 +1,8 @@
 {
 	"bundle": {
 		"resources": ["./libsteam_api.so"]
+	},
+	"build": {
+	  "features": [ "cef" ]
 	}
 }

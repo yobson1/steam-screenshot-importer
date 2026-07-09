@@ -11,12 +11,12 @@ edition = "2024"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-tauri-build = { version = "2", features = [] }
+tauri-build = { git = "https://github.com/tauri-apps/tauri", branch = "feat/cef", features = [] }
 
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-tauri-plugin-opener = "2"
+tauri-plugin-opener = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "feat/cef" }
 steamlocate = "2.1"
 base64 = "0.22"
 steamy-vdf = "0.2"
@@ -33,29 +33,22 @@ walkdir = "2.5"
 reqwest = { version = "0.13", features = ["json", "query"] }
 
 [target."cfg(target_os = \"linux\")".dependencies.tauri]
-version = "2"
-features = ["cef"]
+git = "https://github.com/tauri-apps/tauri"
+branch = "feat/cef"
 default-features = false
+features = []
 
 [target."cfg(not(target_os = \"linux\"))".dependencies.tauri]
-version = "2"
-features = ["cef", "wry"]
-
-[patch.crates-io.tauri]
 git = "https://github.com/tauri-apps/tauri"
 branch = "feat/cef"
+default-features = true
+features = []
 
-[patch.crates-io.tauri-build]
-git = "https://github.com/tauri-apps/tauri"
-branch = "feat/cef"
-
-[patch.crates-io.tauri-plugin]
-git = "https://github.com/tauri-apps/tauri"
-branch = "feat/cef"
-
-[patch.crates-io.tauri-plugin-opener]
-git = "https://github.com/tauri-apps/plugins-workspace"
-branch = "feat/cef"
+[patch.crates-io]
+tauri = { git = "https://github.com/tauri-apps/tauri", branch = "feat/cef" }
+tauri-build = { git = "https://github.com/tauri-apps/tauri", branch = "feat/cef" }
+tauri-plugin = { git = "https://github.com/tauri-apps/tauri", branch = "feat/cef" }
+tauri-plugin-opener = { git = "https://github.com/tauri-apps/plugins-workspace", branch = "feat/cef" }
 
 [features]
 # by default Tauri runs in production mode
@@ -64,3 +57,4 @@ default = [ "custom-protocol" ]
 # this feature is used used for production builds where `devPath` points to the filesystem
 # DO NOT remove this
 custom-protocol = [ "tauri/custom-protocol" ]
+cef = ["tauri/cef"]
