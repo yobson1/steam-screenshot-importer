@@ -46,7 +46,7 @@ jobs:
           pacman -Syu --noconfirm --needed \
             git gnupg zstd cargo cargo-tauri pnpm nodejs npm \
             cairo desktop-file-utils gdk-pixbuf2 xdg-utils glib2 gtk3 \
-            hicolor-icon-theme libsoup3 pango cef pacman-contrib
+            hicolor-icon-theme libsoup3 pango cef pacman-contrib jaq
 
       - name: Create unprivileged build user
         if: matrix.name == 'arch'
@@ -63,10 +63,25 @@ jobs:
       - name: Build Arch package
         if: matrix.name == 'arch'
         run: |
+          steamworks_rs_ver="$(
+            jaq --from toml -r '.package[] | select(.name == "steamworks") | .version' src-tauri/Cargo.lock | head -n1
+          )"
+
+          if [ -z "$steamworks_rs_ver" ]; then
+            echo "steamworks not found in src-tauri/Cargo.lock"
+            exit 1
+          fi
+
+          echo "steamworks-rs version: $steamworks_rs_ver"
+
           cd pkg/arch
+
           version="${GITHUB_REF_NAME#v}"
+
           sed -i "s/^pkgver=.*/pkgver=${version}/" PKGBUILD
           sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+          sed -i "s/^_steamworks_rs_ver=.*/_steamworks_rs_ver=${steamworks_rs_ver}/" PKGBUILD
+
           sudo -u builder updpkgsums
           sudo -u builder makepkg --syncdeps --noconfirm
 
