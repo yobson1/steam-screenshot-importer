@@ -121,13 +121,13 @@ jobs:
           workspaces: src-tauri -> target
 
       - name: Setup Node
-        if: matrix.name != 'arch'
+        if: matrix.name == 'windows'
         uses: actions/setup-node@v5
         with:
           node-version: 24
 
       - name: Setup pnpm
-        if: matrix.name != 'arch'
+        if: matrix.name == 'windows'
         uses: pnpm/action-setup@v6
         with:
           version: 11
