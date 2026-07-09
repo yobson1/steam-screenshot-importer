@@ -178,6 +178,8 @@ jobs:
         if: matrix.name == 'windows'
         shell: pwsh
         run: |
+          New-Item -ItemType Directory -Force src-tauri\target\release | Out-Null
+          Copy-Item C:\vcpkg\installed\x64-windows\bin\dav1d.dll src-tauri\target\release\
           Copy-Item C:\vcpkg\installed\x64-windows\bin\dav1d.dll src-tauri\
 
       - name: Build Windows installer
