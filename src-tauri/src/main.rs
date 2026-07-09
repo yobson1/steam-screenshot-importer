@@ -498,14 +498,9 @@ fn main() {
     create_dir_all(cache_dir).unwrap();
 
     #[cfg(target_os = "linux")]
-    let mut builder = tauri::Builder::<tauri::Cef>::default();
+    let builder = tauri::Builder::<tauri::Cef>::default();
     #[cfg(not(target_os = "linux"))]
     let builder = tauri::Builder::<tauri::Wry>::default();
-
-    #[cfg(target_os = "linux")]
-    if std::env::var_os("APPIMAGE").is_some() {
-        builder = builder.command_line_args([("use-gl", Some("egl"))]);
-    }
 
     builder
         .plugin(tauri_plugin_opener::init())
