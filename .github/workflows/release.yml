@@ -139,7 +139,6 @@ jobs:
       - name: Build AppImage
         if: matrix.name == 'appimage'
         env:
-          NO_STRIP: 'true'
           LD_LIBRARY_PATH: ${{ github.workspace }}/src-tauri/target/release:${{ env.LD_LIBRARY_PATH }}
         run: pnpm tauri build --ci --bundles appimage --verbose
 
