@@ -79,8 +79,13 @@ jobs:
 
           version="${GITHUB_REF_NAME#v}"
 
-          sed -i "s/^pkgver=.*/pkgver=${version}/" PKGBUILD
-          sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+          if [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            sed -i "s/^pkgver=.*/pkgver=${version}/" PKGBUILD
+            sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+          else
+            echo "GITHUB_REF_NAME '${GITHUB_REF_NAME}' does not match vX.Y.Z, leaving pkgver/pkgrel unchanged"
+          fi
+
           sed -i "s/^_steamworks_rs_ver=.*/_steamworks_rs_ver=${steamworks_rs_ver}/" PKGBUILD
 
           sudo -u builder updpkgsums
