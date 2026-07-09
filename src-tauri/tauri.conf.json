@@ -1,5 +1,5 @@
 {
-	"$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+	"$schema": "../node_modules/@tauri-apps/cli-cef/config.schema.json",
 	"build": {
 		"beforeBuildCommand": "pnpm fetch-steamworks && pnpm build",
 		"beforeDevCommand": "pnpm fetch-steamworks && pnpm dev",
