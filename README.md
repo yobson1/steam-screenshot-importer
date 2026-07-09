@@ -1,7 +1,17 @@
-# Steam Screenshot Importer
-Automatic importing of screenshots into steam using the Steamworks SDK.
+<div align="center">
 
-Each image is converted to a jpeg if required, a 200xY thumbnail is created and then registered with steam. The steam screenshot management window is automatically opened to then allow easy upload to steam cloud.
+# Steam Screenshot Importer
+
+[![GitHub Release](https://img.shields.io/github/v/release/yobson1/steam-screenshot-importer)](../../releases/latest)
+[![AUR Release](https://img.shields.io/aur/version/steam-screenshot-importer?logo=arch-linux)](https://aur.archlinux.org/packages/steam-screenshot-importer)
+
+[![GitHub License](https://img.shields.io/github/license/yobson1/steam-screenshot-importer)](/LICENSE)
+[![Tauri Badge](https://img.shields.io/badge/built_with-Tauri-24C8D8?logo=tauri)](https://tauri.app)
+[![Svelte Badge](https://img.shields.io/badge/built_with-Svelte-FF3E00?logo=svelte)](https://svelte.dev)
+
+Automatic importing of screenshots into Steam using the Steamworks SDK.
+
+</div>
 
 ## Usage
 
