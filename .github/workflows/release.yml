@@ -135,7 +135,7 @@ jobs:
         if: matrix.name == 'appimage'
         run: |
           mkdir -p src-tauri/nss-system
-          pacman -Ql nss | grep -E '\.so(\.[0-9]+)?$' | xargs -I{} cp -L {} src-tauri/nss-system/
+          pacman -Ql nss | grep -E '\.so(\.[0-9]+)?$' | awk '{print $2}' | xargs -I{} cp -L {} src-tauri/nss-system/
           find /usr/lib -maxdepth 2 -iname '*.chk' -exec cp {} src-tauri/nss-system/ \;
 
           echo "== Staged NSS files (src-tauri/nss-system) =="
