@@ -1,5 +1,5 @@
 {
 	"bundle": {
-		"resources": ["./steam_api64.dll"]
+		"resources": ["./steam_api64.dll", "./dav1d.dll"]
 	}
 }
