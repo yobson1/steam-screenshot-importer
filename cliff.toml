@@ -62,8 +62,8 @@ body = """
 - Download & run `{{ remote.github.repo }}_{{ version | trim_start_matches(pat="v") }}_x64_en-US.msi`
 
 ### Arch Based Linux Distros
-- Download `{{ remote.github.repo }}-{{ version | trim_start_matches(pat="v") }}-1-any.pkg.tar.zst`
-- Install with: `pacman -U {{ remote.github.repo }}-{{ version | trim_start_matches(pat="v") }}-1-any.pkg.tar.zst`
+- Download `{{ remote.github.repo }}-{{ version | trim_start_matches(pat="v") }}-1-x86_64.pkg.tar.zst`
+- Install with: `pacman -U {{ remote.github.repo }}-{{ version | trim_start_matches(pat="v") }}-1-x86_64.pkg.tar.zst`
 
 ### Other Linux Distros
 - Download `{{ remote.github.repo }}_{{ version | trim_start_matches(pat="v") }}_amd64.AppImage`
