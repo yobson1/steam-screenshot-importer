@@ -136,16 +136,6 @@ jobs:
         if: matrix.name != 'arch'
         run: pnpm install --frozen-lockfile
 
-      - name: Stage system NSS libraries for AppImage bundling
-        if: matrix.name == 'appimage'
-        run: |
-          mkdir -p src-tauri/nss-system
-          pacman -Ql nss | grep -E '\.so(\.[0-9]+)?$' | awk '{print $2}' | xargs -I{} cp -L {} src-tauri/nss-system/
-          find /usr/lib -maxdepth 2 -iname '*.chk' -exec cp {} src-tauri/nss-system/ \;
-
-          echo "== Staged NSS files (src-tauri/nss-system) =="
-          ls -la src-tauri/nss-system/
-
       - name: Build AppImage
         if: matrix.name == 'appimage'
         env:
