@@ -23,7 +23,7 @@ jobs:
             container: archlinux:base-devel
           - name: appimage
             os: ubuntu-latest
-            container: archlinux:base-devel
+            container: ghcr.io/pkgforge-dev/archlinux:latest
           - name: windows
             os: windows-latest
             container: ''
@@ -38,8 +38,12 @@ jobs:
       # ---------------- Arch build (pacman package + .deb) ----------------
 
       - name: Upgrade Arch Linux
-        if: matrix.name != 'windows'
+        if: matrix.name == 'arch'
         uses: arch4edu/cactus/actions/upgrade-archlinux@main
+
+      - name: Prepare Arch Container for AppImage bundler
+        if: matrix.name == 'appimage'
+        uses: pkgforge-dev/anylinux-setup-action@0964f2258d6c93d1391359978dde081fd8b3c6af # v2
 
       - name: Install Arch build dependencies
         if: matrix.name != 'windows'
@@ -48,6 +52,11 @@ jobs:
             git gnupg zstd cargo pnpm nodejs npm patchelf \
             cairo desktop-file-utils gdk-pixbuf2 xdg-utils glib2 gtk3 \
             hicolor-icon-theme libsoup3 pango cef pacman-contrib jaq nss
+
+      - name: Install Linux dependencies
+        if: matrix.name == 'appimage'
+        run: |
+          get-debloated-pkgs --add-common --prefer-nano
 
       - name: Create unprivileged build user
         if: matrix.name == 'arch'
