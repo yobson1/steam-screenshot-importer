@@ -23,7 +23,7 @@ jobs:
             container: archlinux:base-devel
           - name: appimage
             os: ubuntu-latest
-            container: ''
+            container: archlinux:base-devel
           - name: windows
             os: windows-latest
             container: ''
@@ -38,16 +38,16 @@ jobs:
       # ---------------- Arch build (pacman package + .deb) ----------------
 
       - name: Upgrade Arch Linux
-        if: matrix.name == 'arch'
+        if: matrix.name != 'windows'
         uses: arch4edu/cactus/actions/upgrade-archlinux@main
 
       - name: Install Arch build dependencies
-        if: matrix.name == 'arch'
+        if: matrix.name != 'windows'
         run: |
           pacman -Syu --noconfirm --needed \
             git gnupg zstd cargo cargo-tauri pnpm nodejs npm \
             cairo desktop-file-utils gdk-pixbuf2 xdg-utils glib2 gtk3 \
-            hicolor-icon-theme libsoup3 pango cef pacman-contrib jaq
+            hicolor-icon-theme libsoup3 pango cef pacman-contrib jaq nss
 
       - name: Create unprivileged build user
         if: matrix.name == 'arch'
@@ -103,17 +103,6 @@ jobs:
             !pkg/arch/*-debug-*.pkg.tar.zst
             pkg/arch/src/steam-screenshot-importer/src-tauri/target/release/bundle/deb/*.deb
 
-      # ---------------- Plain Ubuntu build (AppImage) ----------------
-
-      - name: Install Linux build dependencies
-        if: matrix.name == 'appimage'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends --no-install-suggests \
-            libdav1d-dev build-essential curl wget file \
-            libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev patchelf \
-            libnss3
-
       # ---------------- Rust/Node toolchain (appimage + windows only) ----------------
 
       - name: Setup Rust
@@ -146,7 +135,7 @@ jobs:
         if: matrix.name == 'appimage'
         run: |
           mkdir -p src-tauri/nss-system
-          dpkg -L libnss3 | grep -E '\.so(\.[0-9]+)?$' | xargs -I{} cp -L {} src-tauri/nss-system/
+          pacman -Ql nss | grep -E '\.so(\.[0-9]+)?$' | xargs -I{} cp -L {} src-tauri/nss-system/
           find /usr/lib -maxdepth 2 -iname '*.chk' -exec cp {} src-tauri/nss-system/ \;
 
           echo "== Staged NSS files (src-tauri/nss-system) =="
