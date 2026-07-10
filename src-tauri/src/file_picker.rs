@@ -1,8 +1,8 @@
 #[tauri::command]
 #[specta::specta]
 pub fn pick_screenshot_files() -> Vec<String> {
-    let default_dir =
-        directories::UserDirs::new().and_then(|dirs| dirs.picture_dir().map(|p| p.to_path_buf()));
+    let default_dir = directories::UserDirs::new()
+        .and_then(|dirs| dirs.picture_dir().map(std::path::Path::to_path_buf));
 
     let mut dialog = rfd::FileDialog::new()
         .set_title("Select screenshots to import")

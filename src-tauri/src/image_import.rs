@@ -2,9 +2,9 @@ use crate::AppRuntime;
 use crate::app_dirs::PROJECT_DIRS;
 use crate::steam::{initialize_steam, open_steam_section};
 use atomic_float::AtomicF32;
-use image::ImageReader;
 use image::codecs::jpeg::JpegEncoder;
 use image::imageops::{FilterType as ImageFilterType, resize};
+use image::{DynamicImage, ImageReader};
 use log::{error, info, warn};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -20,8 +20,8 @@ use tauri::Emitter;
 
 const PROGRESS_EVENT: &str = "screenshotImportProgress";
 const THUMB_WIDTH: u32 = steamworks::sys::k_ScreenshotThumbWidth as u32;
-const MAX_SIDE: u32 = 16000;
-const MAX_RESOLUTION: u32 = 26210175;
+const MAX_SIDE: u32 = 16_000;
+const MAX_RESOLUTION: u32 = 26_210_175;
 
 #[derive(Clone, Copy, Deserialize, specta::Type)]
 pub enum ResizeFilterType {
@@ -141,17 +141,16 @@ pub async fn import_screenshots(
 
     info!("Emptying cache");
     let cleanup_result = remove_dir_all(&ctx.cache_dir)
-        .and_then(|_| create_dir_all(&ctx.cache_dir))
+        .and_then(|()| create_dir_all(&ctx.cache_dir))
         .map_err(|error| format!("Failed to empty screenshot cache: {error}"));
 
     let succeeded = num_of_files - import_errors.len();
 
     let open_section_result = if succeeded > 0 {
         info!(
-            "Import of {} out of {} images complete, opening steam screenshots window",
-            succeeded, num_of_files
+            "Import of {succeeded} out of {num_of_files} images complete, opening steam screenshots window"
         );
-        open_steam_section(&format!("screenshots/{}", app_id))
+        open_steam_section(&format!("screenshots/{app_id}"))
     } else {
         Ok(())
     };
@@ -222,11 +221,11 @@ fn process_single_screenshot(
     let new_file_name = format!("{}_{}.jpg", img_name, options.app_id);
     let new_thumbnail_name = format!("{}_{}_thumb.jpg", img_name, options.app_id);
 
-    info!("New file name: {}", new_file_name);
+    info!("New file name: {new_file_name}");
 
     // Load original image
     info!("Loading image: {}", img_path.display());
-    let mut img = ImageReader::open(file_path)
+    let img = ImageReader::open(file_path)
         .map_err(|error| format!("Failed to open {img_name}.{extension}: {error}"))?
         .decode()
         .map_err(|error| format!("Failed to decode {img_name}.{extension}: {error}"))?;
@@ -234,44 +233,12 @@ fn process_single_screenshot(
     // Convert to jpg or downscale if needed
     let new_img_path = ctx.cache_dir.join(&new_file_name);
 
-    if img.width() > MAX_SIDE
-        || img.height() > MAX_SIDE
-        || img.width() * img.height() > MAX_RESOLUTION
-    {
-        warn!(
-            "Image {}.{} is too large to be imported, it will be downscaled with {:?} q{}",
-            img_name, extension, options.filter_type, options.jpeg_quality
-        );
-
-        let scale_factor = f32::min(
-            MAX_SIDE as f32 / f32::max(img.width() as f32, img.height() as f32),
-            (MAX_RESOLUTION as f32 / (img.width() * img.height()) as f32).sqrt(),
-        );
-        let new_width = (img.width() as f32 * scale_factor) as u32;
-        let new_height = (img.height() as f32 * scale_factor) as u32;
-
-        if new_width == 0 || new_height == 0 {
-            warn!(
-                "Image {}.{} is too large to be imported and cannot be downscaled correctly, it will be skipped",
-                img_name, extension
-            );
-            return Err(format!(
-                "Failed to downscale {img_name}.{extension} to a valid size"
-            ));
-        }
-
-        img = img.resize_exact(new_width, new_height, options.filter_type);
-
-        info!(
-            "{}.{} new size: {}x{}",
-            img_name, extension, new_width, new_height
-        );
-    }
+    let img = resize_for_steam(img, img_name, extension, options);
 
     if extension != "jpg" && extension != "jpeg" {
         info!(
-            "Converting image {}.{} to jpg with {:?} q{}",
-            img_name, extension, options.filter_type, options.jpeg_quality
+            "Converting image {img_name}.{extension} to jpg with {:?} q{}",
+            options.filter_type, options.jpeg_quality
         );
         let file = File::create(&new_img_path)
             .map_err(|error| format!("Failed to create {}: {error}", new_img_path.display()))?;
@@ -281,7 +248,7 @@ fn process_single_screenshot(
             .encode_image(&img)
             .map_err(|error| format!("Failed to encode {img_name}.{extension}: {error}"))?;
     } else {
-        info!("Copying image {}.{}", img_name, extension);
+        info!("Copying image {img_name}.{extension}");
         img.save(&new_img_path)
             .map_err(|error| format!("Failed to save {}: {error}", new_img_path.display()))?;
     }
@@ -290,8 +257,8 @@ fn process_single_screenshot(
 
     // Create thumbnail image
     info!(
-        "Resizing image {}.{} for thumbnail with {:?} q{}",
-        img_name, extension, options.filter_type, options.jpeg_quality
+        "Resizing image {img_name}.{extension} for thumbnail with {:?} q{}",
+        options.filter_type, options.jpeg_quality
     );
     let thumb_img_path = ctx.cache_dir.join(&new_thumbnail_name);
 
@@ -347,11 +314,65 @@ fn process_single_screenshot(
             .map_err(|error| format!("Failed to access Steam client: {error}"))?
             .run_callbacks();
     }
-    info!("Import of {}.{} complete", img_name, extension);
+    info!("Import of {img_name}.{extension} complete");
 
     report_step_progress(ctx, progress_remaining, 0.3);
 
     Ok(())
+}
+
+fn resize_for_steam(
+    img: DynamicImage,
+    img_name: &str,
+    extension: &str,
+    options: ImportOptions,
+) -> DynamicImage {
+    if img.width() <= MAX_SIDE
+        && img.height() <= MAX_SIDE
+        && img.width() * img.height() <= MAX_RESOLUTION
+    {
+        return img;
+    }
+
+    warn!(
+        "Image {img_name}.{extension} is too large to be imported, it will be downscaled with {:?} q{}",
+        options.filter_type, options.jpeg_quality
+    );
+
+    let (new_width, new_height) = downscaled_dimensions(img.width(), img.height());
+    let img = img.resize_exact(new_width, new_height, options.filter_type);
+
+    info!("{img_name}.{extension} new size: {new_width}x{new_height}");
+    img
+}
+
+fn downscaled_dimensions(width: u32, height: u32) -> (u32, u32) {
+    let (dominant, minor, width_is_dominant) = if width >= height {
+        (width, height, true)
+    } else {
+        (height, width, false)
+    };
+    let mut lower = 1;
+    let mut upper = dominant.min(MAX_SIDE);
+
+    while lower < upper {
+        let candidate = lower + (upper - lower).div_ceil(2);
+        let scaled_minor = (u64::from(minor) * u64::from(candidate) / u64::from(dominant)).max(1);
+        if u64::from(candidate) * scaled_minor <= u64::from(MAX_RESOLUTION) {
+            lower = candidate;
+        } else {
+            upper = candidate - 1;
+        }
+    }
+
+    let scaled_minor = u64::from(minor) * u64::from(lower) / u64::from(dominant);
+    let scaled_minor = u32::try_from(scaled_minor.max(1))
+        .expect("scaled minor image dimension cannot exceed the dominant dimension");
+    if width_is_dominant {
+        (lower, scaled_minor)
+    } else {
+        (scaled_minor, lower)
+    }
 }
 
 fn report_step_progress(ctx: &ImportContext, progress_remaining: &mut f32, step_progress: f32) {
@@ -371,6 +392,7 @@ fn update_progress(
     step_progress: f32,
 ) {
     let completed = screenshots_completed.fetch_add(step_progress, Ordering::SeqCst);
+    #[allow(clippy::cast_precision_loss)]
     let progress = ((completed + step_progress) / total_screenshots as f32) * 100.0;
     if let Err(error) = window.emit(PROGRESS_EVENT, progress) {
         error!("Failed to emit screenshot import progress: {error}");

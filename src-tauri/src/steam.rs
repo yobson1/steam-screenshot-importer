@@ -15,7 +15,7 @@ pub fn open_steam_section(section: &str) -> Result<(), String> {
     };
 
     let status = Command::new(open_command)
-        .arg(format!("steam://open/{}", section))
+        .arg(format!("steam://open/{section}"))
         .spawn()
         .map_err(|error| format!("Failed to open Steam: {error}"))?
         .wait()

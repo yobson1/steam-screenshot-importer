@@ -118,7 +118,7 @@ async fn get_library_images_chunk(app_ids: &[u32]) -> HashMap<u32, String> {
         .store_items
         .into_iter()
         .filter_map(library_image_url)
-        .inspect(|(app_id, url)| info!("Resolved URL for AppID {}: {}", app_id, url))
+        .inspect(|(app_id, url)| info!("Resolved URL for AppID {app_id}: {url}"))
         .collect()
 }
 

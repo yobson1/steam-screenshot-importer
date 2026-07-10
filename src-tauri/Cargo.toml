@@ -5,8 +5,17 @@ description = "Steam Screenshot Importer"
 authors = ["yobson"]
 license = "GPL-3.0-only"
 repository = "https://github.com/yobson1/steam-screenshot-importer"
+readme = "../README.md"
+keywords = ["steam", "screenshots", "importer"]
+categories = ["multimedia::images"]
 default-run = "steam-screenshot-importer"
 edition = "2024"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+cargo = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+multiple_crate_versions = "allow"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
