@@ -4,7 +4,7 @@
 <h1>About</h1>
 <div>
 	<p>
-		A Tauri app written with Rust & Svelte using the Steamworks API to import any image as a
+		A Tauri app written with Rust &amp; Svelte using the Steamworks API to import any image as a
 		screenshot for any game you own.
 	</p>
 	<p class="github-link">
