@@ -41,7 +41,7 @@ fn main() {
             steam_locate::get_games,
             steam_locate::get_recent_steam_user,
             image_import::import_screenshots,
-            file_picker::pick_screenshot_files,
+            file_picker::pick_screenshot_files
         ])
         .error_handling(ErrorHandlingMode::Throw);
 
