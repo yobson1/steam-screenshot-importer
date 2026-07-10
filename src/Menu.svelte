@@ -3,24 +3,24 @@
 	import NavButton from './NavButton.svelte';
 	import Swal from 'sweetalert2';
 	import { importScreenshots } from './screenshots';
-	import { onMount } from 'svelte';
 	import type { MenuButton } from './types';
 
 	let { open = $bindable(false), width = 96 }: { open?: boolean; width?: number } = $props();
 
 	let menu: HTMLDivElement;
-	onMount(() => {
-		document.body.onclick = (event) => {
-			const path = event.composedPath();
-			if (
-				!path.includes(menu) &&
-				!path.includes(document.getElementsByClassName('hamburger')[0]) &&
-				!path.includes(document.getElementsByClassName('swal2-container')[0])
-			) {
-				open = false;
-			}
-		};
-	});
+	function handleDocumentClick(event: MouseEvent) {
+		const path = event.composedPath();
+		const hamburger = document.querySelector('.hamburger');
+		const swalContainer = document.querySelector('.swal2-container');
+
+		if (
+			!path.includes(menu) &&
+			(!hamburger || !path.includes(hamburger)) &&
+			(!swalContainer || !path.includes(swalContainer))
+		) {
+			open = false;
+		}
+	}
 
 	let buttons: MenuButton[] = [
 		{ name: 'Home', href: '/', src: 'home.svg', rotate: false },
@@ -56,6 +56,8 @@
 		{ name: 'Options', href: '/settings', src: 'settings.svg', rotate: true }
 	];
 </script>
+
+<svelte:document onclick={handleDocumentClick} />
 
 <div
 	bind:this={menu}
