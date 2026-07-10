@@ -1,12 +1,16 @@
-export type FilterType = 'Nearest' | 'Triangle' | 'CatmullRom' | 'Gaussian' | 'Lanczos3';
+import type { ResizeFilterType } from './bindings';
 
-export const FILTER_TYPES: FilterType[] = [
-	'Nearest',
-	'Triangle',
-	'CatmullRom',
-	'Gaussian',
-	'Lanczos3'
-];
+export type FilterType = ResizeFilterType;
+
+export const FILTER_LABELS = {
+	Nearest: 'Nearest Neighbor: fastest, blockiest',
+	Triangle: 'Triangle: bilinear',
+	CatmullRom: 'Catmull-Rom: bicubic',
+	Gaussian: 'Gaussian',
+	Lanczos3: 'Lanczos3: best quality, slowest'
+} satisfies Record<ResizeFilterType, string>;
+
+export const FILTER_TYPES = Object.keys(FILTER_LABELS) as ResizeFilterType[];
 
 const DEFAULT_QUALITY = 95;
 const DEFAULT_FILTER: FilterType = 'Lanczos3';

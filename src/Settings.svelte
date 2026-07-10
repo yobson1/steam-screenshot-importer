@@ -1,14 +1,11 @@
 <script lang="ts">
-	import { screenshotSettings, FILTER_TYPES, type FilterType } from './settings.store.svelte';
+	import {
+		screenshotSettings,
+		FILTER_LABELS,
+		FILTER_TYPES,
+		type FilterType
+	} from './settings.store.svelte';
 	import runUpdateCheck from './updater';
-
-	const filterLabels: Record<FilterType, string> = {
-		Nearest: 'Nearest Neighbor: fastest, blockiest',
-		Triangle: 'Triangle: bilinear',
-		CatmullRom: 'Catmull-Rom: bicubic',
-		Gaussian: 'Gaussian',
-		Lanczos3: 'Lanczos3: best quality, slowest'
-	};
 
 	let checkingForUpdates = $state(false);
 
@@ -60,7 +57,7 @@
 		<label for="filter-type">Downscale filter</label>
 		<select id="filter-type" value={screenshotSettings.filterType} onchange={onFilterChange}>
 			{#each FILTER_TYPES as filter (filter)}
-				<option value={filter}>{filterLabels[filter]}</option>
+				<option value={filter}>{FILTER_LABELS[filter]}</option>
 			{/each}
 		</select>
 		<p class="hint">

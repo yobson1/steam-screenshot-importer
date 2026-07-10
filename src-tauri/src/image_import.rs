@@ -4,10 +4,10 @@ use crate::steam::{initialize_steam, open_steam_section};
 use atomic_float::AtomicF32;
 use image::ImageReader;
 use image::codecs::jpeg::JpegEncoder;
-use image::imageops::{FilterType, resize};
+use image::imageops::{FilterType as ImageFilterType, resize};
 use log::{error, info, warn};
 use rayon::prelude::*;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::ffi::CString;
 use std::fs::{File, create_dir_all, remove_dir_all};
 use std::io::BufWriter;
@@ -23,11 +23,32 @@ const THUMB_WIDTH: u32 = steamworks::sys::k_ScreenshotThumbWidth as u32;
 const MAX_SIDE: u32 = 16000;
 const MAX_RESOLUTION: u32 = 26210175;
 
+#[derive(Clone, Copy, Deserialize, specta::Type)]
+pub enum ResizeFilterType {
+    Nearest,
+    Triangle,
+    CatmullRom,
+    Gaussian,
+    Lanczos3,
+}
+
+impl From<ResizeFilterType> for ImageFilterType {
+    fn from(filter_type: ResizeFilterType) -> Self {
+        match filter_type {
+            ResizeFilterType::Nearest => Self::Nearest,
+            ResizeFilterType::Triangle => Self::Triangle,
+            ResizeFilterType::CatmullRom => Self::CatmullRom,
+            ResizeFilterType::Gaussian => Self::Gaussian,
+            ResizeFilterType::Lanczos3 => Self::Lanczos3,
+        }
+    }
+}
+
 #[derive(Clone, Copy)]
 struct ImportOptions {
     app_id: u32,
     jpeg_quality: u8,
-    filter_type: FilterType,
+    filter_type: ImageFilterType,
 }
 
 #[derive(Serialize, specta::Type)]
@@ -74,23 +95,13 @@ struct ImportContext {
     total_screenshots: usize,
 }
 
-fn parse_filter_type(s: &str) -> FilterType {
-    match s {
-        "Nearest" => FilterType::Nearest,
-        "Triangle" => FilterType::Triangle,
-        "CatmullRom" => FilterType::CatmullRom,
-        "Gaussian" => FilterType::Gaussian,
-        _ => FilterType::Lanczos3,
-    }
-}
-
 #[tauri::command]
 #[specta::specta]
 pub async fn import_screenshots(
     file_paths: Vec<String>,
     app_id: u32,
     jpeg_quality: u8,
-    filter_type: String,
+    filter_type: ResizeFilterType,
     window: tauri::Window<AppRuntime>,
 ) -> Result<(), ImportError> {
     info!(
@@ -108,7 +119,7 @@ pub async fn import_screenshots(
     let options = ImportOptions {
         app_id,
         jpeg_quality: jpeg_quality.clamp(1, 100),
-        filter_type: parse_filter_type(&filter_type),
+        filter_type: filter_type.into(),
     };
 
     // Check if steam is running and initialize client
