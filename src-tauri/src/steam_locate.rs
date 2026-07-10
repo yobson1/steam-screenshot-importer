@@ -114,29 +114,29 @@ pub fn get_recent_steam_user() -> Result<String, String> {
     let steam_path = steam_dir.path();
     let vdf_path: PathBuf = steam_path.join("config").join("loginusers.vdf");
 
-    let loginusers = vdf::load(&vdf_path).unwrap();
-    let users: Vec<vdf::Entry> = loginusers
+    let loginusers = vdf::load(&vdf_path).map_err(|error| error.to_string())?;
+    let users = loginusers
         .lookup("users")
         .ok_or("Failed to get local Steam users")?
         .as_table()
-        .ok_or("Failed to convert local Steam users to table")?
-        .values()
-        .cloned()
-        .collect();
+        .ok_or("Failed to convert local Steam users to table")?;
 
-    let mut steam_user: &str = "";
-    for user in &users {
-        if let Some(recent_entry) = user.lookup("AutoLogin")
-            && recent_entry.to::<bool>().unwrap_or(false)
+    for user in users.values() {
+        if !user
+            .lookup("AutoLogin")
+            .is_some_and(|entry| entry.to::<bool>().unwrap_or(false))
         {
-            steam_user = user
-                .lookup("PersonaName")
-                .ok_or("Failed to get Steam username")?
-                .as_str()
-                .ok_or("Failed to convert Steam username to string")?;
-            break;
+            continue;
         }
+
+        let steam_user = user
+            .lookup("PersonaName")
+            .ok_or("Failed to get Steam username")?
+            .as_str()
+            .ok_or("Failed to convert Steam username to string")?;
+
+        return Ok(steam_user.to_owned());
     }
 
-    Ok(steam_user.to_string())
+    Ok(String::new())
 }
