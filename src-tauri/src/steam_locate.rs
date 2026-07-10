@@ -1,3 +1,4 @@
+use crate::image_fetch;
 use base64::{Engine as _, engine::general_purpose::STANDARD_NO_PAD};
 use log::info;
 use std::collections::HashMap;
@@ -7,6 +8,12 @@ use steamy_vdf as vdf;
 use walkdir::WalkDir;
 
 const LIB_CACHE_PATH: &str = "appcache/librarycache/";
+
+struct LocatedGame {
+    appid: u32,
+    image_src: Option<String>,
+    name: String,
+}
 
 fn find_library_capsule(steam_path: &Path, appid: u32) -> Option<PathBuf> {
     let app_cache_path = steam_path.join(LIB_CACHE_PATH).join(appid.to_string());
@@ -26,7 +33,29 @@ fn find_library_capsule(steam_path: &Path, appid: u32) -> Option<PathBuf> {
 }
 
 #[tauri::command]
-pub fn get_games() -> Result<Vec<(u32, String, String)>, String> {
+pub async fn get_games() -> Result<Vec<(u32, String, String)>, String> {
+    let games = get_local_games()?;
+    let missing_app_ids: Vec<u32> = games
+        .iter()
+        .filter(|game| game.image_src.is_none())
+        .map(|game| game.appid)
+        .collect();
+    let fetched_images = image_fetch::get_library_images(&missing_app_ids).await;
+
+    Ok(games
+        .into_iter()
+        .map(|game| {
+            let image_src = game
+                .image_src
+                .or_else(|| fetched_images.get(&game.appid).cloned())
+                .unwrap_or_default();
+
+            (game.appid, image_src, game.name)
+        })
+        .collect())
+}
+
+fn get_local_games() -> Result<Vec<LocatedGame>, String> {
     let steam_dir = steamlocate::locate().map_err(|_| "Failed to locate Steam installation")?;
     let apps_hash: HashMap<u32, steamlocate::App> = steam_dir
         .libraries()
@@ -48,25 +77,27 @@ pub fn get_games() -> Result<Vec<(u32, String, String)>, String> {
     apps.sort_unstable();
     let steam_path = steam_dir.path();
 
-    let mut imgs: Vec<(u32, String, String)> = vec![];
+    let mut games = vec![];
     for appid in apps {
-        let img = find_library_capsule(steam_path, appid)
+        let image_src = find_library_capsule(steam_path, appid)
             .and_then(|path| {
                 info!("Found image path: {}", path.display());
                 read(path).ok()
             })
-            .unwrap_or_default();
-
-        let b64_img = STANDARD_NO_PAD.encode(img);
+            .map(|img| format!("data:image/jpeg;base64,{}", STANDARD_NO_PAD.encode(img)));
 
         let app = apps_hash.get(&appid).unwrap();
 
         let name = app.name.as_ref().unwrap();
 
-        imgs.push((appid, b64_img, name.to_string()));
+        games.push(LocatedGame {
+            appid,
+            image_src,
+            name: name.to_string(),
+        });
     }
 
-    Ok(imgs)
+    Ok(games)
 }
 
 #[tauri::command]

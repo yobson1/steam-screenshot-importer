@@ -36,8 +36,7 @@ fn main() {
             steam_locate::get_games,
             steam_locate::get_recent_steam_user,
             image_import::import_screenshots,
-            file_picker::pick_screenshot_files,
-            image_fetch::get_library_image
+            file_picker::pick_screenshot_files
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

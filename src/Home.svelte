@@ -4,7 +4,7 @@
 	import Swal from 'sweetalert2';
 	import Fuse from 'fuse.js';
 
-	type Game = [appId: number, base64Img: string, appName: string];
+	type Game = [appId: number, imageSrc: string, appName: string];
 
 	const SEARCH_DEBOUNCE_MS = 200;
 
@@ -49,10 +49,6 @@
 				? games
 				: (fuse?.search(debouncedQuery).map((result) => result.item) ?? [])
 	);
-
-	function getSteamLibraryImage(appID: number) {
-		return invoke<string | null>('get_library_image', { appId: appID });
-	}
 </script>
 
 <content>
@@ -105,19 +101,7 @@
 		{:else}
 			<section class="tiles">
 				{#each filteredGames as game (game[0])}
-					{#if game[1] !== ''}
-						<GameTile
-							appID={game[0]}
-							appName={game[2]}
-							imgSrc={'data:image/jpeg;base64,' + game[1]}
-						/>
-					{:else}
-						{#await getSteamLibraryImage(game[0])}
-							<GameTile appID={game[0]} appName={game[2]} />
-						{:then image}
-							<GameTile appID={game[0]} appName={game[2]} imgSrc={image ?? ''} />
-						{/await}
-					{/if}
+					<GameTile appID={game[0]} appName={game[2]} imgSrc={game[1]} />
 				{/each}
 			</section>
 		{/if}
