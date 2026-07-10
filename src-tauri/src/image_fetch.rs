@@ -1,10 +1,34 @@
-use log::info;
-use serde_json::Value;
+use log::{error, info};
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
 static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 const STORE_ITEMS_CHUNK_SIZE: usize = 100;
+
+#[derive(Deserialize)]
+struct StoreBrowseResponse {
+    response: StoreBrowseResult,
+}
+
+#[derive(Deserialize)]
+struct StoreBrowseResult {
+    #[serde(default)]
+    store_items: Vec<StoreItem>,
+}
+
+#[derive(Deserialize)]
+struct StoreItem {
+    appid: Option<u32>,
+    id: Option<u32>,
+    assets: Option<StoreItemAssets>,
+}
+
+#[derive(Deserialize)]
+struct StoreItemAssets {
+    asset_url_format: Option<String>,
+    library_capsule: Option<String>,
+}
 
 fn http_client() -> &'static reqwest::Client {
     HTTP_CLIENT.get_or_init(reqwest::Client::new)
@@ -46,44 +70,67 @@ async fn get_library_images_chunk(app_ids: &[u32]) -> HashMap<u32, String> {
         .await
     {
         Ok(response) => response,
-        Err(_) => return HashMap::new(),
+        Err(error) => {
+            error!(
+                "Failed to request Steam library images for {} apps: {}",
+                app_ids.len(),
+                error
+            );
+            return HashMap::new();
+        }
     };
 
-    let response = match response.text().await {
+    if !response.status().is_success() {
+        error!(
+            "Steam Store API returned HTTP {} while fetching library images for {} apps",
+            response.status(),
+            app_ids.len()
+        );
+        return HashMap::new();
+    }
+
+    let response_body = match response.text().await {
+        Ok(response_body) => response_body,
+        Err(error) => {
+            error!(
+                "Failed to read Steam Store API response for {} apps: {}",
+                app_ids.len(),
+                error
+            );
+            return HashMap::new();
+        }
+    };
+
+    let response: StoreBrowseResponse = match serde_json::from_str(&response_body) {
         Ok(response) => response,
-        Err(_) => return HashMap::new(),
+        Err(error) => {
+            error!(
+                "Failed to parse Steam Store API response for {} apps: {}",
+                app_ids.len(),
+                error
+            );
+            return HashMap::new();
+        }
     };
 
-    let json: Value = match serde_json::from_str(&response) {
-        Ok(json) => json,
-        Err(_) => return HashMap::new(),
-    };
-
-    json.get("response")
-        .and_then(|response| response.get("store_items"))
-        .and_then(Value::as_array)
+    response
+        .response
+        .store_items
         .into_iter()
-        .flatten()
         .filter_map(library_image_url)
         .inspect(|(app_id, url)| info!("Resolved URL for AppID {}: {}", app_id, url))
         .collect()
 }
 
-fn library_image_url(store_item: &Value) -> Option<(u32, String)> {
-    let app_id = store_item
-        .get("appid")
-        .or_else(|| store_item.get("id"))?
-        .as_u64()?
-        .try_into()
-        .ok()?;
-
-    let assets = store_item.get("assets")?;
-    let format = assets.get("asset_url_format")?.as_str()?;
-    let capsule = assets.get("library_capsule")?.as_str()?;
+fn library_image_url(store_item: StoreItem) -> Option<(u32, String)> {
+    let app_id = store_item.appid.or(store_item.id)?;
+    let assets = store_item.assets?;
+    let format = assets.asset_url_format?;
+    let capsule = assets.library_capsule?;
 
     let url = format!(
         "https://shared.fastly.steamstatic.com/store_item_assets/{}",
-        format.replace("${FILENAME}", capsule)
+        format.replace("${FILENAME}", &capsule)
     );
 
     Some((app_id, url))
