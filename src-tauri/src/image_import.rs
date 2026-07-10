@@ -234,7 +234,7 @@ fn process_single_screenshot(
 
         let scale_factor = f32::min(
             MAX_SIDE as f32 / f32::max(img.width() as f32, img.height() as f32),
-            MAX_RESOLUTION as f32 / (img.width() * img.height()) as f32,
+            (MAX_RESOLUTION as f32 / (img.width() * img.height()) as f32).sqrt(),
         );
         let new_width = (img.width() as f32 * scale_factor) as u32;
         let new_height = (img.height() as f32 * scale_factor) as u32;
