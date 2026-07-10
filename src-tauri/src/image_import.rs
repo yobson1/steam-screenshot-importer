@@ -1,3 +1,4 @@
+use crate::AppRuntime;
 use crate::app_dirs::PROJECT_DIRS;
 use crate::steam::{initialize_steam, open_steam_section};
 use atomic_float::AtomicF32;
@@ -30,8 +31,8 @@ struct ImportOptions {
     filter_type: FilterType,
 }
 
-struct ImportContext<R: tauri::Runtime> {
-    window: tauri::Window<R>,
+struct ImportContext {
+    window: tauri::Window<AppRuntime>,
     cache_dir: PathBuf,
     client: Mutex<steamworks::Client>,
     screenshots_completed: AtomicF32,
@@ -49,12 +50,13 @@ fn parse_filter_type(s: &str) -> FilterType {
 }
 
 #[tauri::command]
-pub async fn import_screenshots<R: tauri::Runtime>(
+#[specta::specta]
+pub async fn import_screenshots(
     file_paths: Vec<String>,
     app_id: u32,
     jpeg_quality: u8,
     filter_type: String,
-    window: tauri::Window<R>,
+    window: tauri::Window<AppRuntime>,
 ) -> String {
     info!(
         "Importing {} screenshots under AppID {}",
@@ -107,11 +109,7 @@ pub async fn import_screenshots<R: tauri::Runtime>(
     String::default()
 }
 
-fn import_single_screenshot<R: tauri::Runtime>(
-    file_path: &str,
-    ctx: &ImportContext<R>,
-    options: ImportOptions,
-) {
+fn import_single_screenshot(file_path: &str, ctx: &ImportContext, options: ImportOptions) {
     let img_path = Path::new(file_path);
     let img_name = img_path.file_stem().unwrap().to_str().unwrap();
     let extension = img_path.extension().unwrap().to_str().unwrap();
@@ -241,8 +239,8 @@ fn import_single_screenshot<R: tauri::Runtime>(
     );
 }
 
-fn update_progress<R: tauri::Runtime>(
-    window: &tauri::Window<R>,
+fn update_progress(
+    window: &tauri::Window<AppRuntime>,
     screenshots_completed: &AtomicF32,
     total_screenshots: usize,
     step_progress: f32,

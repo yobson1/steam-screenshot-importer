@@ -9,7 +9,7 @@ use walkdir::WalkDir;
 
 const LIB_CACHE_PATH: &str = "appcache/librarycache/";
 
-#[derive(Serialize)]
+#[derive(Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct Game {
     app_id: u32,
@@ -41,6 +41,7 @@ fn find_library_capsule(steam_path: &Path, appid: u32) -> Option<PathBuf> {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_games() -> Result<Vec<Game>, String> {
     let games = get_local_games()?;
     let missing_app_ids: Vec<u32> = games
@@ -107,6 +108,7 @@ fn get_local_games() -> Result<Vec<LocalGame>, String> {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub fn get_recent_steam_user() -> Result<String, String> {
     let steam_dir = steamlocate::locate().map_err(|_| "Failed to locate Steam installation")?;
     let steam_path = steam_dir.path();

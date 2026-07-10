@@ -1,24 +1,18 @@
 <script lang="ts">
 	import GameTile from './GameTile.svelte';
-	import { invoke } from '@tauri-apps/api/core';
+	import { commands, type Game } from './bindings';
 	import Swal from 'sweetalert2';
 	import Fuse from 'fuse.js';
 
-	type Game = {
-		appId: number;
-		imageSrc: string;
-		appName: string;
-	};
-
 	const SEARCH_DEBOUNCE_MS = 200;
 
-	let get_games_prom = invoke<Game[]>('get_games');
-	let steam_user_prom = invoke<string>('get_recent_steam_user');
+	let gamesPromise = commands.getGames();
+	let steamUserPromise = commands.getRecentSteamUser();
 
 	let games = $state<Game[] | null>(null);
 	let gamesError = $state<string | null>(null);
 
-	get_games_prom
+	gamesPromise
 		.then((result) => {
 			games = result;
 		})
@@ -56,7 +50,7 @@
 </script>
 
 <content>
-	{#await steam_user_prom}
+	{#await steamUserPromise}
 		<h1>Welcome user!</h1>
 	{:then steam_username}
 		<h1>Welcome {steam_username}!</h1>

@@ -1,4 +1,5 @@
 #[tauri::command]
+#[specta::specta]
 pub fn pick_screenshot_files() -> Vec<String> {
     let default_dir =
         directories::UserDirs::new().and_then(|dirs| dirs.picture_dir().map(|p| p.to_path_buf()));

@@ -10,6 +10,7 @@ export default defineConfig(
 			'node_modules/**',
 			'dist/**',
 			'pkg/**',
+			'src/bindings.ts',
 			'src-tauri/**',
 			'src/**/*.js',
 			'src/**/*.js.map'

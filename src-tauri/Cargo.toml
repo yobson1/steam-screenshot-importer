@@ -31,6 +31,9 @@ atomic_float = "1.1"
 rfd = "0.17"
 walkdir = "2.5"
 reqwest = { version = "0.13", features = ["json", "query"] }
+specta-typescript = "0.0"
+specta = "=2.0.0-rc.25"
+tauri-specta = { version = "=2.0.0-rc.25", features = ["derive", "typescript"] }
 
 [target."cfg(target_os = \"linux\")".dependencies.tauri]
 git = "https://github.com/tauri-apps/tauri"

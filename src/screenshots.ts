@@ -1,15 +1,15 @@
-import { invoke } from '@tauri-apps/api/core';
 import Swal from 'sweetalert2';
 import { listen } from '@tauri-apps/api/event';
 import { screenshotSettings } from './settings.store.svelte';
+import { commands } from './bindings';
 
-function sendScreenshots(paths: string[] | string, appID: number) {
-	return invoke<string>('import_screenshots', {
-		filePaths: paths,
-		appId: appID,
-		jpegQuality: screenshotSettings.jpegQuality,
-		filterType: screenshotSettings.filterType
-	});
+function sendScreenshots(paths: string[], appID: number) {
+	return commands.importScreenshots(
+		paths,
+		appID,
+		screenshotSettings.jpegQuality,
+		screenshotSettings.filterType
+	);
 }
 
 let progress = 0;
@@ -55,7 +55,7 @@ listen('screenshotImportError', (event) => {
 });
 
 function importScreenshots(appID: number) {
-	invoke<string[]>('pick_screenshot_files').then((files) => {
+	commands.pickScreenshotFiles().then((files) => {
 		if (files !== null && files.length > 0) {
 			Swal.fire({
 				title: 'Importing Screenshots',

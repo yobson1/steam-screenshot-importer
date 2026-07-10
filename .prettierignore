@@ -1,6 +1,7 @@
 node_modules/
 dist/
 src-tauri/
+src/bindings.ts
 .zed/
 
 pkg/arch/**
