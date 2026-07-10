@@ -1,25 +1,28 @@
 /node_modules/
+
+# Output
 /dist/
-/src-tauri/steam_api/
 /src-tauri/tools/steamworks-fetcher/target/
+
+# Built packages
 /pkg/arch/**
 !/pkg/arch/PKGBUILD
+
+# Redistributables
+/src-tauri/steam_api/
 libsteam_api.so
 steam_api64.dll
 
+# OS
 .DS_Store
+Thumbs.db
 
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-!.vscode/*.code-snippets
-
-# Local History for Visual Studio Code
-.history/
-
-# Built Visual Studio Code Extensions
-*.vsix
-
+# Env
 .env
+.env.*
+!.env.example
+!.env.test
+
+# Vite
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
