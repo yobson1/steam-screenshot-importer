@@ -4,9 +4,10 @@
 		"target": "ESNext",
 		"module": "ESNext",
 		"moduleResolution": "bundler",
+		"noEmit": true,
 		"resolveJsonModule": true,
 		"types": ["vite/client"]
 	},
 	"include": ["src/**/*.d.ts", "src/**/*.ts", "src/**/*.svelte"],
-	"exclude": ["node_modules/*", "public/*"]
+	"exclude": ["node_modules/*", "public/*", "pkg/**", "src/**/*.js"]
 }
