@@ -2,7 +2,6 @@ use crate::image_fetch;
 use base64::{Engine as _, engine::general_purpose::STANDARD_NO_PAD};
 use log::info;
 use serde::Serialize;
-use std::collections::HashMap;
 use std::fs::read;
 use std::path::{Path, PathBuf};
 use steamy_vdf as vdf;
@@ -70,43 +69,37 @@ pub async fn get_games() -> Result<Vec<Game>, String> {
 
 fn get_local_games() -> Result<Vec<LocalGame>, String> {
     let steam_dir = steamlocate::locate().map_err(|_| "Failed to locate Steam installation")?;
-    let apps_hash: HashMap<u32, steamlocate::App> = steam_dir
+    let libraries = steam_dir
         .libraries()
-        .map_err(|_| "Failed to get Steam libraries")?
-        .filter_map(|library| {
-            let library = library.ok()?;
+        .map_err(|_| "Failed to get Steam libraries")?;
+    let mut apps = Vec::new();
 
-            Some(
-                library
-                    .apps()
-                    .filter_map(Result::ok)
-                    .map(|app| (app.app_id, app))
-                    .collect::<HashMap<_, _>>(),
-            )
-        })
-        .flatten()
-        .collect();
-    let mut apps: Vec<u32> = apps_hash.keys().cloned().collect();
-    apps.sort_unstable();
+    for library in libraries.filter_map(Result::ok) {
+        apps.extend(library.apps().filter_map(Result::ok));
+    }
+
+    apps.sort_unstable_by_key(|app| app.app_id);
+    apps.dedup_by_key(|app| app.app_id);
+
     let steam_path = steam_dir.path();
-
     let mut games = vec![];
-    for appid in apps {
-        let image_src = find_library_capsule(steam_path, appid)
+
+    for app in apps {
+        let Some(app_name) = app.name else {
+            continue;
+        };
+
+        let image_src = find_library_capsule(steam_path, app.app_id)
             .and_then(|path| {
                 info!("Found image path: {}", path.display());
                 read(path).ok()
             })
             .map(|img| format!("data:image/jpeg;base64,{}", STANDARD_NO_PAD.encode(img)));
 
-        let app = apps_hash.get(&appid).unwrap();
-
-        let name = app.name.as_ref().unwrap();
-
         games.push(LocalGame {
-            app_id: appid,
+            app_id: app.app_id,
             image_src,
-            app_name: name.to_string(),
+            app_name,
         });
     }
 
