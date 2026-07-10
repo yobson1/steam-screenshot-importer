@@ -229,6 +229,14 @@ h1 {
 	margin-block: 1rem 0;
 }
 
+.import-errors-container {
+	max-height: min(60vh, 32rem);
+	margin-inline: 0;
+	padding-inline: 0.25rem;
+	overflow-y: auto;
+	text-align: left;
+}
+
 /* Markdown release notes */
 
 .release-notes {

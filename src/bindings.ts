@@ -17,3 +17,13 @@ export type Game = {
 	appName: string,
 };
 
+export type ImportError = {
+	summary: string,
+	errors: ImportFailure[],
+};
+
+export type ImportFailure = {
+	filePath: string,
+	message: string,
+};
+

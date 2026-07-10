@@ -7,6 +7,7 @@ use image::codecs::jpeg::JpegEncoder;
 use image::imageops::{FilterType, resize};
 use log::{error, info, warn};
 use rayon::prelude::*;
+use serde::Serialize;
 use std::ffi::CString;
 use std::fs::{File, create_dir_all, remove_dir_all};
 use std::io::BufWriter;
@@ -27,6 +28,42 @@ struct ImportOptions {
     app_id: u32,
     jpeg_quality: u8,
     filter_type: FilterType,
+}
+
+#[derive(Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct ImportError {
+    summary: String,
+    errors: Vec<ImportFailure>,
+}
+
+#[derive(Serialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+struct ImportFailure {
+    file_path: String,
+    message: String,
+}
+
+impl ImportError {
+    fn from_failures(total: usize, errors: Vec<ImportFailure>) -> Self {
+        let failed = errors.len();
+        let summary = if failed == total {
+            format!("All {total} screenshots failed to import.")
+        } else {
+            format!("{failed} of {total} screenshots failed to import.")
+        };
+
+        Self { summary, errors }
+    }
+}
+
+impl From<String> for ImportError {
+    fn from(summary: String) -> Self {
+        Self {
+            summary,
+            errors: Vec::new(),
+        }
+    }
 }
 
 struct ImportContext {
@@ -55,7 +92,7 @@ pub async fn import_screenshots(
     jpeg_quality: u8,
     filter_type: String,
     window: tauri::Window<AppRuntime>,
-) -> Result<(), String> {
+) -> Result<(), ImportError> {
     info!(
         "Importing {} screenshots under AppID {}",
         file_paths.len(),
@@ -65,7 +102,7 @@ pub async fn import_screenshots(
     let num_of_files = file_paths.len();
     if num_of_files == 0 {
         warn!("Got no screenshots to import");
-        return Err("No screenshots to import".to_string());
+        return Err("No screenshots to import".to_string().into());
     }
 
     let options = ImportOptions {
@@ -86,7 +123,7 @@ pub async fn import_screenshots(
     });
 
     // Process screenshots in parallel
-    let import_errors: Vec<String> = file_paths
+    let import_errors: Vec<ImportFailure> = file_paths
         .par_iter()
         .filter_map(|file_path| import_single_screenshot(file_path, &ctx, options).err())
         .collect();
@@ -116,9 +153,14 @@ pub async fn import_screenshots(
             error!("{error}");
         }
 
-        let import_error = format_import_errors(&import_errors);
-        error!("{import_error}");
-        return Err(import_error);
+        for import_error in &import_errors {
+            error!(
+                "Failed to import {}: {}",
+                import_error.file_path, import_error.message
+            );
+        }
+
+        return Err(ImportError::from_failures(num_of_files, import_errors));
     }
 
     cleanup_result?;
@@ -127,22 +169,11 @@ pub async fn import_screenshots(
     Ok(())
 }
 
-fn format_import_errors(errors: &[String]) -> String {
-    match errors {
-        [error] => error.clone(),
-        errors => format!(
-            "{} screenshots failed to import:\n{}",
-            errors.len(),
-            errors.join("\n")
-        ),
-    }
-}
-
 fn import_single_screenshot(
     file_path: &str,
     ctx: &ImportContext,
     options: ImportOptions,
-) -> Result<(), String> {
+) -> Result<(), ImportFailure> {
     let mut progress_remaining = 1.0;
     let result = process_single_screenshot(file_path, ctx, options, &mut progress_remaining);
 
@@ -155,7 +186,10 @@ fn import_single_screenshot(
         );
     }
 
-    result
+    result.map_err(|message| ImportFailure {
+        file_path: file_path.to_string(),
+        message,
+    })
 }
 
 fn process_single_screenshot(
