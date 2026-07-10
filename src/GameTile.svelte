@@ -5,7 +5,7 @@
 
 	let { imgSrc, appID, appName }: { imgSrc?: string; appID: number; appName: string } = $props();
 
-	let tile: HTMLDivElement;
+	let tile: HTMLDivElement & { vanillaTilt?: VanillaTilt };
 
 	function handleImgErr(e: Event) {
 		const img = e.currentTarget as HTMLImageElement;
@@ -39,7 +39,7 @@
 	});
 
 	onDestroy(() => {
-		(tile as any).vanillaTilt?.destroy();
+		tile.vanillaTilt?.destroy();
 	});
 </script>
 
