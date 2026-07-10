@@ -263,7 +263,10 @@ fn process_single_screenshot(
     );
     let thumb_img_path = ctx.cache_dir.join(&new_thumbnail_name);
 
-    let thumb_height = (THUMB_WIDTH * img.height()) / img.width();
+    let thumb_height =
+        (u64::from(THUMB_WIDTH) * u64::from(img.height()) / u64::from(img.width())).max(1);
+    let thumb_height = u32::try_from(thumb_height)
+        .map_err(|error| format!("Invalid thumbnail height: {error}"))?;
     let thumb_img = resize(&img, THUMB_WIDTH, thumb_height, options.filter_type);
     let file = File::create(&thumb_img_path)
         .map_err(|error| format!("Failed to create {}: {error}", thumb_img_path.display()))?;
