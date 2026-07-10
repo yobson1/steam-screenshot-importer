@@ -6,12 +6,10 @@
 	let { imgSrc, appID, appName }: { imgSrc?: string; appID: number; appName: string } = $props();
 
 	let tile: HTMLDivElement & { vanillaTilt?: VanillaTilt };
+	let imageFailed = $state(false);
 
-	function handleImgErr(e: Event) {
-		const img = e.currentTarget as HTMLImageElement;
-		img.src = 'defaultappimage.png';
-		const title = tile.querySelector('span');
-		if (title) title.style.visibility = 'visible';
+	function handleImgErr() {
+		imageFailed = true;
 	}
 
 	function handleActivate() {
@@ -51,8 +49,12 @@
 	onclick={handleActivate}
 	onkeydown={handleKeydown}
 >
-	<img src={imgSrc} alt={appName} onerror={handleImgErr} />
-	<span class="no-img-title">{appName}</span>
+	{#if imageFailed}
+		<img src="defaultappimage.png" alt={appName} />
+		<span class="no-img-title">{appName}</span>
+	{:else}
+		<img src={imgSrc} alt={appName} onerror={handleImgErr} />
+	{/if}
 </div>
 
 <style>
@@ -77,7 +79,6 @@
 		font-size: 1.5em;
 		color: #fff;
 		text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.3);
-		visibility: hidden;
 		user-select: none;
 		pointer-events: none;
 		overflow: hidden;
