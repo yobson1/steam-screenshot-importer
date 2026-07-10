@@ -47,7 +47,7 @@ $ ./steam-screenshot-importer-<version>-x86_64.AppImage
 ```
 
 ## Supported image formats
-Theoretically supports all formats that the [images](https://github.com/image-rs/image) crate supports. They've not all been tested though.
+Theoretically supports all formats that the [images](https://github.com/image-rs/image#feature-flags) crate supports. They've not all been tested though.
 
 ## Platform support
 Currently only distributing/testing for Win64 and Arch based Linux distros
