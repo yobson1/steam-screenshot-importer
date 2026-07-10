@@ -49,7 +49,7 @@
 
 <style>
 	.footer {
-		position: absolute;
+		position: fixed;
 		bottom: 0.5rem;
 		left: 50vw;
 		transform: translateX(-50%);
