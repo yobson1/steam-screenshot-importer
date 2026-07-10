@@ -9,7 +9,7 @@ use log::{error, info, warn};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::ffi::CString;
-use std::fs::{File, create_dir_all, remove_dir_all};
+use std::fs::{File, copy, create_dir_all, remove_dir_all};
 use std::io::BufWriter;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, atomic::Ordering};
@@ -233,11 +233,16 @@ fn process_single_screenshot(
     // Convert to jpg or downscale if needed
     let new_img_path = ctx.cache_dir.join(&new_file_name);
 
-    let img = resize_for_steam(img, img_name, extension, options);
+    let (img, was_resized) = resize_for_steam(img, img_name, extension, options);
+    let is_jpeg = extension.eq_ignore_ascii_case("jpg") || extension.eq_ignore_ascii_case("jpeg");
 
-    if extension != "jpg" && extension != "jpeg" {
+    if is_jpeg && !was_resized {
+        info!("Copying image {img_name}.{extension}");
+        copy(img_path, &new_img_path)
+            .map_err(|error| format!("Failed to copy {}: {error}", new_img_path.display()))?;
+    } else {
         info!(
-            "Converting image {img_name}.{extension} to jpg with {:?} q{}",
+            "Encoding image {img_name}.{extension} as jpg with {:?} q{}",
             options.filter_type, options.jpeg_quality
         );
         let file = File::create(&new_img_path)
@@ -247,10 +252,6 @@ fn process_single_screenshot(
         encoder
             .encode_image(&img)
             .map_err(|error| format!("Failed to encode {img_name}.{extension}: {error}"))?;
-    } else {
-        info!("Copying image {img_name}.{extension}");
-        img.save(&new_img_path)
-            .map_err(|error| format!("Failed to save {}: {error}", new_img_path.display()))?;
     }
 
     report_step_progress(ctx, progress_remaining, 0.3);
@@ -326,12 +327,12 @@ fn resize_for_steam(
     img_name: &str,
     extension: &str,
     options: ImportOptions,
-) -> DynamicImage {
+) -> (DynamicImage, bool) {
     if img.width() <= MAX_SIDE
         && img.height() <= MAX_SIDE
         && img.width() * img.height() <= MAX_RESOLUTION
     {
-        return img;
+        return (img, false);
     }
 
     warn!(
@@ -343,7 +344,7 @@ fn resize_for_steam(
     let img = img.resize_exact(new_width, new_height, options.filter_type);
 
     info!("{img_name}.{extension} new size: {new_width}x{new_height}");
-    img
+    (img, true)
 }
 
 fn downscaled_dimensions(width: u32, height: u32) -> (u32, u32) {
