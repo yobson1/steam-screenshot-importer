@@ -1,6 +1,7 @@
 use crate::image_fetch;
 use base64::{Engine as _, engine::general_purpose::STANDARD_NO_PAD};
 use log::info;
+use serde::Serialize;
 use std::collections::HashMap;
 use std::fs::read;
 use std::path::{Path, PathBuf};
@@ -9,10 +10,18 @@ use walkdir::WalkDir;
 
 const LIB_CACHE_PATH: &str = "appcache/librarycache/";
 
-struct LocatedGame {
-    appid: u32,
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Game {
+    app_id: u32,
+    image_src: String,
+    app_name: String,
+}
+
+struct LocalGame {
+    app_id: u32,
     image_src: Option<String>,
-    name: String,
+    app_name: String,
 }
 
 fn find_library_capsule(steam_path: &Path, appid: u32) -> Option<PathBuf> {
@@ -33,12 +42,12 @@ fn find_library_capsule(steam_path: &Path, appid: u32) -> Option<PathBuf> {
 }
 
 #[tauri::command]
-pub async fn get_games() -> Result<Vec<(u32, String, String)>, String> {
+pub async fn get_games() -> Result<Vec<Game>, String> {
     let games = get_local_games()?;
     let missing_app_ids: Vec<u32> = games
         .iter()
         .filter(|game| game.image_src.is_none())
-        .map(|game| game.appid)
+        .map(|game| game.app_id)
         .collect();
     let fetched_images = image_fetch::get_library_images(&missing_app_ids).await;
 
@@ -47,15 +56,19 @@ pub async fn get_games() -> Result<Vec<(u32, String, String)>, String> {
         .map(|game| {
             let image_src = game
                 .image_src
-                .or_else(|| fetched_images.get(&game.appid).cloned())
+                .or_else(|| fetched_images.get(&game.app_id).cloned())
                 .unwrap_or_default();
 
-            (game.appid, image_src, game.name)
+            Game {
+                app_id: game.app_id,
+                image_src,
+                app_name: game.app_name,
+            }
         })
         .collect())
 }
 
-fn get_local_games() -> Result<Vec<LocatedGame>, String> {
+fn get_local_games() -> Result<Vec<LocalGame>, String> {
     let steam_dir = steamlocate::locate().map_err(|_| "Failed to locate Steam installation")?;
     let apps_hash: HashMap<u32, steamlocate::App> = steam_dir
         .libraries()
@@ -90,10 +103,10 @@ fn get_local_games() -> Result<Vec<LocatedGame>, String> {
 
         let name = app.name.as_ref().unwrap();
 
-        games.push(LocatedGame {
-            appid,
+        games.push(LocalGame {
+            app_id: appid,
             image_src,
-            name: name.to_string(),
+            app_name: name.to_string(),
         });
     }
 

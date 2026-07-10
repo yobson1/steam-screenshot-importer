@@ -4,7 +4,11 @@
 	import Swal from 'sweetalert2';
 	import Fuse from 'fuse.js';
 
-	type Game = [appId: number, imageSrc: string, appName: string];
+	type Game = {
+		appId: number;
+		imageSrc: string;
+		appName: string;
+	};
 
 	const SEARCH_DEBOUNCE_MS = 200;
 
@@ -39,7 +43,7 @@
 	});
 
 	let fuse = $derived(
-		games ? new Fuse(games, { keys: ['2'], threshold: 0.4, ignoreLocation: true }) : null
+		games ? new Fuse(games, { keys: ['appName'], threshold: 0.4, ignoreLocation: true }) : null
 	);
 
 	let filteredGames = $derived(
@@ -100,8 +104,8 @@
 			<p>No games found matching "{debouncedQuery}"</p>
 		{:else}
 			<section class="tiles">
-				{#each filteredGames as game (game[0])}
-					<GameTile appID={game[0]} appName={game[2]} imgSrc={game[1]} />
+				{#each filteredGames as game (game.appId)}
+					<GameTile appID={game.appId} appName={game.appName} imgSrc={game.imageSrc} />
 				{/each}
 			</section>
 		{/if}
