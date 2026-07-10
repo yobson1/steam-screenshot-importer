@@ -1,0 +1,9 @@
+node_modules/
+dist/
+src-tauri/
+
+pkg/arch/**
+
+# Package Managers
+package-lock.json
+pnpm-lock.yaml
