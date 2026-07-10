@@ -49,62 +49,60 @@
 	);
 </script>
 
-<content>
-	{#await steamUserPromise}
-		<h1>Welcome user!</h1>
-	{:then steam_username}
-		<h1>Welcome {steam_username}!</h1>
-	{:catch error}
-		<p>Error: {error}</p>
-	{/await}
+{#await steamUserPromise}
+	<h1>Welcome user!</h1>
+{:then steam_username}
+	<h1>Welcome {steam_username}!</h1>
+{:catch error}
+	<p>Error: {error}</p>
+{/await}
 
-	{#if games === null}
-		<p>{gamesError ? `Error: ${gamesError}` : 'Fetching games.'}</p>
-	{:else}
-		<div class="search-container">
-			<div class="search-wrapper">
-				<input
-					type="search"
-					class="game-search"
-					placeholder="Search your games…"
-					bind:value={searchQuery}
-					aria-label="Search games"
-				/>
-				<!-- si:search-duotone from https://sargamicons.com/ -->
-				<svg
-					class="search-icon"
-					xmlns="http://www.w3.org/2000/svg"
-					width="1.2em"
-					height="1.2em"
-					viewBox="0 0 24 24"
-				>
-					<path d="M0 0h24v24H0z" fill="none" />
-					<g fill="none">
-						<path fill="currentColor" fill-opacity=".16" d="M11 19a8 8 0 1 0 0-16a8 8 0 0 0 0 16" />
-						<path
-							stroke="currentColor"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-miterlimit="10"
-							stroke-width="1.5"
-							d="m21 21l-4-4m2-6a8 8 0 1 1-16 0a8 8 0 0 1 16 0"
-						/>
-					</g>
-				</svg>
-			</div>
+{#if games === null}
+	<p>{gamesError ? `Error: ${gamesError}` : 'Fetching games.'}</p>
+{:else}
+	<div class="search-container">
+		<div class="search-wrapper">
+			<input
+				type="search"
+				class="game-search"
+				placeholder="Search your games…"
+				bind:value={searchQuery}
+				aria-label="Search games"
+			/>
+			<!-- si:search-duotone from https://sargamicons.com/ -->
+			<svg
+				class="search-icon"
+				xmlns="http://www.w3.org/2000/svg"
+				width="1.2em"
+				height="1.2em"
+				viewBox="0 0 24 24"
+			>
+				<path d="M0 0h24v24H0z" fill="none" />
+				<g fill="none">
+					<path fill="currentColor" fill-opacity=".16" d="M11 19a8 8 0 1 0 0-16a8 8 0 0 0 0 16" />
+					<path
+						stroke="currentColor"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-miterlimit="10"
+						stroke-width="1.5"
+						d="m21 21l-4-4m2-6a8 8 0 1 1-16 0a8 8 0 0 1 16 0"
+					/>
+				</g>
+			</svg>
 		</div>
+	</div>
 
-		{#if filteredGames.length === 0}
-			<p>No games found matching "{debouncedQuery}"</p>
-		{:else}
-			<section class="tiles">
-				{#each filteredGames as game (game.appId)}
-					<GameTile appID={game.appId} appName={game.appName} imgSrc={game.imageSrc} />
-				{/each}
-			</section>
-		{/if}
+	{#if filteredGames.length === 0}
+		<p>No games found matching "{debouncedQuery}"</p>
+	{:else}
+		<section class="tiles">
+			{#each filteredGames as game (game.appId)}
+				<GameTile appID={game.appId} appName={game.appName} imgSrc={game.imageSrc} />
+			{/each}
+		</section>
 	{/if}
-</content>
+{/if}
 
 <style>
 	.search-container {
