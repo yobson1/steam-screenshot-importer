@@ -8,18 +8,16 @@ use image::imageops::{FilterType, resize};
 use log::{error, info, warn};
 use rayon::prelude::*;
 use std::ffi::CString;
-use std::fs::{File, create_dir, remove_dir_all};
+use std::fs::{File, create_dir_all, remove_dir_all};
 use std::io::BufWriter;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, atomic::Ordering};
-use std::thread;
-use std::time::Duration;
+use steamworks::sys::INVALID_SCREENSHOT_HANDLE;
 use steamworks::sys::SteamAPI_ISteamScreenshots_AddScreenshotToLibrary as add_screenshot_to_library;
 use steamworks::sys::SteamAPI_SteamScreenshots_v003 as get_steam_screenshots;
 use tauri::Emitter;
 
 const PROGRESS_EVENT: &str = "screenshotImportProgress";
-const ERROR_EVENT: &str = "screenshotImportError";
 const THUMB_WIDTH: u32 = steamworks::sys::k_ScreenshotThumbWidth as u32;
 const MAX_SIDE: u32 = 16000;
 const MAX_RESOLUTION: u32 = 26210175;
@@ -57,7 +55,7 @@ pub async fn import_screenshots(
     jpeg_quality: u8,
     filter_type: String,
     window: tauri::Window<AppRuntime>,
-) -> String {
+) -> Result<(), String> {
     info!(
         "Importing {} screenshots under AppID {}",
         file_paths.len(),
@@ -67,7 +65,7 @@ pub async fn import_screenshots(
     let num_of_files = file_paths.len();
     if num_of_files == 0 {
         warn!("Got no screenshots to import");
-        return "No screenshots to import!".to_string();
+        return Err("No screenshots to import".to_string());
     }
 
     let options = ImportOptions {
@@ -77,7 +75,7 @@ pub async fn import_screenshots(
     };
 
     // Check if steam is running and initialize client
-    let client = initialize_steam(app_id).unwrap();
+    let client = initialize_steam(app_id)?;
 
     let ctx = Arc::new(ImportContext {
         window,
@@ -88,31 +86,93 @@ pub async fn import_screenshots(
     });
 
     // Process screenshots in parallel
-    file_paths.par_iter().for_each(|file_path| {
-        let ctx = ctx.clone();
-        import_single_screenshot(file_path, &ctx, options);
-    });
-
-    info!(
-        "Import of {} images complete, opening steam screenshots window",
-        num_of_files
-    );
-
-    // Open the steam screenshots window for upload
-    open_steam_section(&format!("screenshots/{}", app_id));
+    let import_errors: Vec<String> = file_paths
+        .par_iter()
+        .filter_map(|file_path| import_single_screenshot(file_path, &ctx, options).err())
+        .collect();
 
     info!("Emptying cache");
-    remove_dir_all(&ctx.cache_dir)
-        .and_then(|_| create_dir(&ctx.cache_dir))
-        .unwrap();
+    let cleanup_result = remove_dir_all(&ctx.cache_dir)
+        .and_then(|_| create_dir_all(&ctx.cache_dir))
+        .map_err(|error| format!("Failed to empty screenshot cache: {error}"));
 
-    String::default()
+    let succeeded = num_of_files - import_errors.len();
+
+    let open_section_result = if succeeded > 0 {
+        info!(
+            "Import of {} out of {} images complete, opening steam screenshots window",
+            succeeded, num_of_files
+        );
+        open_steam_section(&format!("screenshots/{}", app_id))
+    } else {
+        Ok(())
+    };
+
+    if !import_errors.is_empty() {
+        if let Err(error) = cleanup_result {
+            error!("{error}");
+        }
+        if let Err(error) = open_section_result {
+            error!("{error}");
+        }
+
+        let import_error = format_import_errors(&import_errors);
+        error!("{import_error}");
+        return Err(import_error);
+    }
+
+    cleanup_result?;
+    open_section_result?;
+
+    Ok(())
 }
 
-fn import_single_screenshot(file_path: &str, ctx: &ImportContext, options: ImportOptions) {
+fn format_import_errors(errors: &[String]) -> String {
+    match errors {
+        [error] => error.clone(),
+        errors => format!(
+            "{} screenshots failed to import:\n{}",
+            errors.len(),
+            errors.join("\n")
+        ),
+    }
+}
+
+fn import_single_screenshot(
+    file_path: &str,
+    ctx: &ImportContext,
+    options: ImportOptions,
+) -> Result<(), String> {
+    let mut progress_remaining = 1.0;
+    let result = process_single_screenshot(file_path, ctx, options, &mut progress_remaining);
+
+    if result.is_err() && progress_remaining > 0.0 {
+        update_progress(
+            &ctx.window,
+            &ctx.screenshots_completed,
+            ctx.total_screenshots,
+            progress_remaining,
+        );
+    }
+
+    result
+}
+
+fn process_single_screenshot(
+    file_path: &str,
+    ctx: &ImportContext,
+    options: ImportOptions,
+    progress_remaining: &mut f32,
+) -> Result<(), String> {
     let img_path = Path::new(file_path);
-    let img_name = img_path.file_stem().unwrap().to_str().unwrap();
-    let extension = img_path.extension().unwrap().to_str().unwrap();
+    let img_name = img_path
+        .file_stem()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| format!("Invalid screenshot path: {file_path}"))?;
+    let extension = img_path
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .ok_or_else(|| format!("Screenshot has no valid extension: {file_path}"))?;
 
     let new_file_name = format!("{}_{}.jpg", img_name, options.app_id);
     let new_thumbnail_name = format!("{}_{}_thumb.jpg", img_name, options.app_id);
@@ -121,17 +181,10 @@ fn import_single_screenshot(file_path: &str, ctx: &ImportContext, options: Impor
 
     // Load original image
     info!("Loading image: {}", img_path.display());
-    let mut img = match ImageReader::open(file_path).unwrap().decode() {
-        Ok(img) => img,
-        Err(e) => {
-            ctx.window
-                .emit(ERROR_EVENT, &format!("{}.{}\n{}", img_name, extension, e))
-                .unwrap();
-            error!("{}", e);
-            thread::sleep(Duration::from_millis(2500));
-            return;
-        }
-    };
+    let mut img = ImageReader::open(file_path)
+        .map_err(|error| format!("Failed to open {img_name}.{extension}: {error}"))?
+        .decode()
+        .map_err(|error| format!("Failed to decode {img_name}.{extension}: {error}"))?;
 
     // Convert to jpg or downscale if needed
     let new_img_path = ctx.cache_dir.join(&new_file_name);
@@ -157,7 +210,9 @@ fn import_single_screenshot(file_path: &str, ctx: &ImportContext, options: Impor
                 "Image {}.{} is too large to be imported and cannot be downscaled correctly, it will be skipped",
                 img_name, extension
             );
-            return;
+            return Err(format!(
+                "Failed to downscale {img_name}.{extension} to a valid size"
+            ));
         }
 
         img = img.resize_exact(new_width, new_height, options.filter_type);
@@ -173,21 +228,20 @@ fn import_single_screenshot(file_path: &str, ctx: &ImportContext, options: Impor
             "Converting image {}.{} to jpg with {:?} q{}",
             img_name, extension, options.filter_type, options.jpeg_quality
         );
-        let file = File::create(&new_img_path).unwrap();
+        let file = File::create(&new_img_path)
+            .map_err(|error| format!("Failed to create {}: {error}", new_img_path.display()))?;
         let writer = BufWriter::new(file);
         let mut encoder = JpegEncoder::new_with_quality(writer, options.jpeg_quality);
-        encoder.encode_image(&img).unwrap();
+        encoder
+            .encode_image(&img)
+            .map_err(|error| format!("Failed to encode {img_name}.{extension}: {error}"))?;
     } else {
         info!("Copying image {}.{}", img_name, extension);
-        img.save(&new_img_path).unwrap();
+        img.save(&new_img_path)
+            .map_err(|error| format!("Failed to save {}: {error}", new_img_path.display()))?;
     }
 
-    update_progress(
-        &ctx.window,
-        &ctx.screenshots_completed,
-        ctx.total_screenshots,
-        0.3,
-    );
+    report_step_progress(ctx, progress_remaining, 0.3);
 
     // Create thumbnail image
     info!(
@@ -198,17 +252,15 @@ fn import_single_screenshot(file_path: &str, ctx: &ImportContext, options: Impor
 
     let thumb_height = (THUMB_WIDTH * img.height()) / img.width();
     let thumb_img = resize(&img, THUMB_WIDTH, thumb_height, options.filter_type);
-    let file = File::create(&thumb_img_path).unwrap();
+    let file = File::create(&thumb_img_path)
+        .map_err(|error| format!("Failed to create {}: {error}", thumb_img_path.display()))?;
     let writer = BufWriter::new(&file);
     let mut encoder = JpegEncoder::new_with_quality(writer, options.jpeg_quality);
-    encoder.encode_image(&thumb_img).unwrap();
+    encoder.encode_image(&thumb_img).map_err(|error| {
+        format!("Failed to create thumbnail for {img_name}.{extension}: {error}")
+    })?;
 
-    update_progress(
-        &ctx.window,
-        &ctx.screenshots_completed,
-        ctx.total_screenshots,
-        0.4,
-    );
+    report_step_progress(ctx, progress_remaining, 0.4);
 
     // Import screenshot
     info!(
@@ -218,25 +270,53 @@ fn import_single_screenshot(file_path: &str, ctx: &ImportContext, options: Impor
     );
     unsafe {
         let screenshots = get_steam_screenshots();
-        let screenshot_path = CString::new(&*new_img_path.to_string_lossy()).unwrap();
-        let thumbnail_path = CString::new(&*thumb_img_path.to_string_lossy()).unwrap();
-        add_screenshot_to_library(
+        let screenshot_path = CString::new(new_img_path.to_string_lossy().as_bytes())
+            .map_err(|error| format!("Invalid screenshot path: {error}"))?;
+        let thumbnail_path = CString::new(thumb_img_path.to_string_lossy().as_bytes())
+            .map_err(|error| format!("Invalid thumbnail path: {error}"))?;
+        let width = img
+            .width()
+            .try_into()
+            .map_err(|error| format!("Invalid screenshot width: {error}"))?;
+        let height = img
+            .height()
+            .try_into()
+            .map_err(|error| format!("Invalid screenshot height: {error}"))?;
+
+        let screenshot_handle = add_screenshot_to_library(
             screenshots,
             screenshot_path.as_ptr(),
             thumbnail_path.as_ptr(),
-            img.width().try_into().unwrap(),
-            img.height().try_into().unwrap(),
+            width,
+            height,
         );
-        ctx.client.lock().unwrap().run_callbacks();
+
+        if screenshot_handle == INVALID_SCREENSHOT_HANDLE {
+            return Err(format!(
+                "Steam failed to import {img_name}.{extension} into its screenshot library"
+            ));
+        }
+
+        ctx.client
+            .lock()
+            .map_err(|error| format!("Failed to access Steam client: {error}"))?
+            .run_callbacks();
     }
     info!("Import of {}.{} complete", img_name, extension);
 
+    report_step_progress(ctx, progress_remaining, 0.3);
+
+    Ok(())
+}
+
+fn report_step_progress(ctx: &ImportContext, progress_remaining: &mut f32, step_progress: f32) {
     update_progress(
         &ctx.window,
         &ctx.screenshots_completed,
         ctx.total_screenshots,
-        0.3,
+        step_progress,
     );
+    *progress_remaining = (*progress_remaining - step_progress).max(0.0);
 }
 
 fn update_progress(
@@ -247,5 +327,7 @@ fn update_progress(
 ) {
     let completed = screenshots_completed.fetch_add(step_progress, Ordering::SeqCst);
     let progress = ((completed + step_progress) / total_screenshots as f32) * 100.0;
-    window.emit(PROGRESS_EVENT, progress).unwrap();
+    if let Err(error) = window.emit(PROGRESS_EVENT, progress) {
+        error!("Failed to emit screenshot import progress: {error}");
+    }
 }

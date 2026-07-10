@@ -12,6 +12,12 @@ function sendScreenshots(paths: string[], appID: number) {
 	);
 }
 
+function errorMessage(error: unknown): string {
+	if (typeof error === 'string') return error;
+	if (error instanceof Error) return error.message;
+	return 'An unexpected error occurred';
+}
+
 let progress = 0;
 
 listen('screenshotImportProgress', (event) => {
@@ -44,54 +50,46 @@ listen('screenshotImportProgress', (event) => {
 	}
 });
 
-listen('screenshotImportError', (event) => {
-	Swal.fire({
-		title: 'Import Error',
-		text: `${event.payload}`,
-		icon: 'error',
-		allowOutsideClick: false,
-		allowEscapeKey: false
-	});
-});
+async function importScreenshots(appID: number) {
+	try {
+		const files = await commands.pickScreenshotFiles();
 
-function importScreenshots(appID: number) {
-	commands.pickScreenshotFiles().then((files) => {
-		if (files !== null && files.length > 0) {
-			Swal.fire({
-				title: 'Importing Screenshots',
-				text: 'Loading...',
-				showConfirmButton: false,
-				allowOutsideClick: false,
-				allowEscapeKey: false
-			});
-
-			sendScreenshots(files, appID).then((err) => {
-				if (err) {
-					Swal.fire({
-						title: 'Error',
-						text: err,
-						icon: 'error'
-					});
-
-					console.error(err);
-				} else {
-					Swal.fire({
-						title: 'Success',
-						text: 'Screenshots imported',
-						icon: 'success',
-						timer: 5000,
-						showConfirmButton: false
-					});
-				}
-			});
-		} else {
-			Swal.fire({
+		if (files.length === 0) {
+			await Swal.fire({
 				title: 'Error',
 				text: 'No files selected',
 				icon: 'error'
 			});
+			return;
 		}
-	});
+
+		void Swal.fire({
+			title: 'Importing Screenshots',
+			text: 'Loading...',
+			showConfirmButton: false,
+			allowOutsideClick: false,
+			allowEscapeKey: false
+		});
+
+		await sendScreenshots(files, appID);
+
+		await Swal.fire({
+			title: 'Success',
+			text: 'Screenshots imported',
+			icon: 'success',
+			timer: 5000,
+			showConfirmButton: false
+		});
+	} catch (error) {
+		const message = errorMessage(error);
+		console.error(message);
+
+		await Swal.fire({
+			title: 'Error',
+			text: message,
+			icon: 'error'
+		});
+	}
 }
 
 export { importScreenshots };

@@ -6,7 +6,7 @@ import { invoke as __TAURI_INVOKE } from "@tauri-apps/api/core";
 export const commands = {
 	getGames: () => __TAURI_INVOKE<Game[]>("get_games"),
 	getRecentSteamUser: () => __TAURI_INVOKE<string>("get_recent_steam_user"),
-	importScreenshots: (filePaths: string[], appId: number, jpegQuality: number, filterType: string) => __TAURI_INVOKE<string>("import_screenshots", { filePaths, appId, jpegQuality, filterType }),
+	importScreenshots: (filePaths: string[], appId: number, jpegQuality: number, filterType: string) => __TAURI_INVOKE<null>("import_screenshots", { filePaths, appId, jpegQuality, filterType }),
 	pickScreenshotFiles: () => __TAURI_INVOKE<string[]>("pick_screenshot_files"),
 };
 

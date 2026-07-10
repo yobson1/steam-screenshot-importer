@@ -5,28 +5,34 @@ use std::time::{Duration, Instant};
 use steamworks::Client;
 use steamworks::sys::SteamAPI_IsSteamRunning as is_steam_running;
 
-pub fn open_steam_section(section: &str) {
+pub fn open_steam_section(section: &str) -> Result<(), String> {
     let open_command = if cfg!(target_os = "windows") {
         "explorer"
     } else if cfg!(target_os = "linux") {
         "xdg-open"
     } else {
-        panic!("Unsupported OS");
+        return Err("Unsupported OS".to_string());
     };
 
-    Command::new(open_command)
+    let status = Command::new(open_command)
         .arg(format!("steam://open/{}", section))
         .spawn()
-        .unwrap()
+        .map_err(|error| format!("Failed to open Steam: {error}"))?
         .wait()
-        .unwrap();
+        .map_err(|error| format!("Failed while waiting for Steam to open: {error}"))?;
+
+    if cfg!(target_os = "linux") && !status.success() {
+        return Err(format!("Failed to open Steam: {status}"));
+    }
+
+    Ok(())
 }
 
 pub fn initialize_steam(app_id: u32) -> Result<Client, String> {
     if unsafe { is_steam_running() } {
         Client::init_app(app_id).map_err(|_| "Failed to initialize steamworks!\nMake sure steam is open and you own the game you're attempting to import for.".to_string())
     } else {
-        open_steam_section("main");
+        open_steam_section("main")?;
         wait_for_steam(app_id)
     }
 }
