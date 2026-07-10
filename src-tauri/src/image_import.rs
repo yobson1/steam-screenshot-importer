@@ -9,7 +9,7 @@ use log::{error, info, warn};
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::ffi::CString;
-use std::fs::{File, copy, create_dir_all, remove_dir_all};
+use std::fs::{File, copy, create_dir, create_dir_all, remove_dir_all};
 use std::io::BufWriter;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, atomic::Ordering};
@@ -136,7 +136,10 @@ pub async fn import_screenshots(
     // Process screenshots in parallel
     let import_errors: Vec<ImportFailure> = file_paths
         .par_iter()
-        .filter_map(|file_path| import_single_screenshot(file_path, &ctx, options).err())
+        .enumerate()
+        .filter_map(|(file_index, file_path)| {
+            import_single_screenshot(file_path, file_index, &ctx, options).err()
+        })
         .collect();
 
     info!("Emptying cache");
@@ -181,11 +184,13 @@ pub async fn import_screenshots(
 
 fn import_single_screenshot(
     file_path: &str,
+    file_index: usize,
     ctx: &ImportContext,
     options: ImportOptions,
 ) -> Result<(), ImportFailure> {
     let mut progress_remaining = 1.0;
-    let result = process_single_screenshot(file_path, ctx, options, &mut progress_remaining);
+    let result =
+        process_single_screenshot(file_path, file_index, ctx, options, &mut progress_remaining);
 
     if result.is_err() && progress_remaining > 0.0 {
         update_progress(
@@ -204,6 +209,7 @@ fn import_single_screenshot(
 
 fn process_single_screenshot(
     file_path: &str,
+    file_index: usize,
     ctx: &ImportContext,
     options: ImportOptions,
     progress_remaining: &mut f32,
@@ -231,7 +237,10 @@ fn process_single_screenshot(
         .map_err(|error| format!("Failed to decode {img_name}.{extension}: {error}"))?;
 
     // Convert to jpg or downscale if needed
-    let new_img_path = ctx.cache_dir.join(&new_file_name);
+    let file_cache_dir = ctx.cache_dir.join(file_index.to_string());
+    create_dir(&file_cache_dir)
+        .map_err(|error| format!("Failed to create screenshot cache: {error}"))?;
+    let new_img_path = file_cache_dir.join(&new_file_name);
 
     let (img, was_resized) = resize_for_steam(img, img_name, extension, options);
     let is_jpeg = extension.eq_ignore_ascii_case("jpg") || extension.eq_ignore_ascii_case("jpeg");
@@ -261,7 +270,7 @@ fn process_single_screenshot(
         "Resizing image {img_name}.{extension} for thumbnail with {:?} q{}",
         options.filter_type, options.jpeg_quality
     );
-    let thumb_img_path = ctx.cache_dir.join(&new_thumbnail_name);
+    let thumb_img_path = file_cache_dir.join(&new_thumbnail_name);
 
     let thumb_height =
         (u64::from(THUMB_WIDTH) * u64::from(img.height()) / u64::from(img.width())).max(1);
