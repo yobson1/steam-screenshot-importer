@@ -216,6 +216,20 @@ jobs:
         with:
           path: artifacts
 
+      - name: Create source tarball
+        run: |
+          git archive --format=tar.gz --prefix=${{ github.event.repository.name }}-src_${{ github.ref_name }}/ \
+            -o ${{ github.event.repository.name }}-src_${{ github.ref_name }}.tar.gz ${{ github.ref }}
+
+      - name: Import GPG key
+        run: |
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+
+      - name: Sign tarball
+        run: |
+          gpg --batch --yes --local-user A41EB2986F63F6C40FCF2D03ED26A71EB8EB7A34 --detach-sign --armor \
+            ${{ github.event.repository.name }}-src_${{ github.ref_name }}.tar.gz
+
       - name: Install typos
         uses: taiki-e/install-action@v2
         with:
@@ -300,3 +314,5 @@ jobs:
             artifacts/**/*.deb
             artifacts/**/*.AppImage
             artifacts/**/*.msi
+            **/*.tar.gz
+            **/*.tar.gz.asc
