@@ -8,6 +8,18 @@ use std::{
     path::{Path, PathBuf},
 };
 
+const STEAMWORKS_BASE_URL: &str = "https://github.com/Noxime/steamworks-rs/raw/refs/tags";
+const STEAMWORKS_LIBRARIES: &[(&str, &str, &str)] = &[
+    ("windows", "x86", "steam_api.dll"),
+    ("windows", "x86_64", "win64/steam_api64.dll"),
+    ("linux", "x86", "linux32/libsteam_api.so"),
+    ("linux", "x86_64", "linux64/libsteam_api.so"),
+    ("linux", "aarch64", "linuxarm64/libsteam_api.so"),
+    ("android", "aarch64", "androidarm64/libsteam_api.so"),
+    ("macos", "x86_64", "osx/libsteam_api.dylib"),
+    ("macos", "aarch64", "osx/libsteam_api.dylib"),
+];
+
 #[derive(Deserialize)]
 struct CargoLock {
     package: Vec<Package>,
@@ -23,18 +35,60 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-env-changed=NO_STEAMWORKS");
     println!("cargo:rerun-if-changed=Cargo.lock");
 
-    fetch_steamworks()?;
+    if std::env::var_os("NO_STEAMWORKS").is_some() {
+        println!("cargo:warning=NO_STEAMWORKS set, skipping Steamworks binary fetch");
+        tauri_build::build();
+        return Ok(());
+    }
+
+    let target_os = std::env::var("CARGO_CFG_TARGET_OS")?;
+    let target_arch = std::env::var("CARGO_CFG_TARGET_ARCH")?;
+    let remote_path = steamworks_remote_path(&target_os, &target_arch)?;
+    let library_name = library_name(remote_path)?;
+
+    fetch_steamworks(remote_path, library_name, &target_os, &target_arch)?;
     tauri_build::build();
 
     Ok(())
 }
 
-fn fetch_steamworks() -> Result<(), Box<dyn std::error::Error>> {
-    if std::env::var_os("NO_STEAMWORKS").is_some() {
-        println!("cargo:warning=NO_STEAMWORKS set, skipping Steamworks binary fetch");
-        return Ok(());
-    }
+fn steamworks_remote_path(
+    target_os: &str,
+    target_arch: &str,
+) -> Result<&'static str, Box<dyn std::error::Error>> {
+    STEAMWORKS_LIBRARIES
+        .iter()
+        .find_map(|(os, arch, path)| (*os == target_os && *arch == target_arch).then_some(*path))
+        .ok_or_else(|| format!("unsupported Steamworks target: {target_arch}-{target_os}").into())
+}
 
+fn steamworks_library_path(
+    root: &Path,
+    version: &str,
+    target_os: &str,
+    target_arch: &str,
+    library_name: &str,
+) -> PathBuf {
+    root.join("steam_api")
+        .join(version)
+        .join(target_os)
+        .join(target_arch)
+        .join(library_name)
+}
+
+fn library_name(remote_path: &str) -> Result<&str, Box<dyn std::error::Error>> {
+    Path::new(remote_path)
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| format!("invalid Steamworks remote path: {remote_path}").into())
+}
+
+fn fetch_steamworks(
+    remote_path: &str,
+    library_name: &str,
+    target_os: &str,
+    target_arch: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let lock = fs::read_to_string(root.join("Cargo.lock"))?;
     let lock: CargoLock = toml::from_str(&lock)?;
@@ -48,27 +102,17 @@ fn fetch_steamworks() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("Steamworks version: {version}");
 
-    let version_dir = root.join("steam_api").join(version);
-    fs::create_dir_all(&version_dir)?;
+    let library = steamworks_library_path(&root, version, target_os, target_arch, library_name);
+    fs::create_dir_all(library.parent().expect("library path has no parent"))?;
 
-    let dll = version_dir.join("steam_api64.dll");
     download_if_missing(
-        &dll,
+        &library,
         &format!(
-            "https://github.com/Noxime/steamworks-rs/raw/refs/tags/v{version}/steamworks-sys/lib/steam/redistributable_bin/win64/steam_api64.dll"
+            "{STEAMWORKS_BASE_URL}/v{version}/steamworks-sys/lib/steam/redistributable_bin/{remote_path}"
         ),
     )?;
 
-    let so = version_dir.join("libsteam_api.so");
-    download_if_missing(
-        &so,
-        &format!(
-            "https://github.com/Noxime/steamworks-rs/raw/refs/tags/v{version}/steamworks-sys/lib/steam/redistributable_bin/linux64/libsteam_api.so"
-        ),
-    )?;
-
-    update_link(&root.join("steam_api64.dll"), &dll)?;
-    update_link(&root.join("libsteam_api.so"), &so)?;
+    update_link(&root.join(library_name), &library)?;
 
     Ok(())
 }
