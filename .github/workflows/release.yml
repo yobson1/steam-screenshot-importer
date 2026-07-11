@@ -148,7 +148,7 @@ jobs:
           path: |
             pkg/arch/*.pkg.tar.zst
             !pkg/arch/*-debug-*.pkg.tar.zst
-            pkg/arch/src/steam-screenshot-importer/src-tauri/target/release/bundle/deb/*.deb
+            pkg/arch/src/${{ github.event.repository.name }}-src_${{ steps.version.outputs.version }}/src-tauri/target/release/bundle/deb/*.deb
             ${{ github.event.repository.name }}-src_${{ steps.version.outputs.version }}.tar.gz
             ${{ github.event.repository.name }}-src_${{ steps.version.outputs.version }}.tar.gz.asc
 
