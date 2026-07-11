@@ -119,16 +119,16 @@ commit_parsers = [
     { message = "^Merge branch '.*'", skip = true },
     { message = "^feat", group = "<!-- 0 -->🚀 Features" },
     { message = "^fix", group = "<!-- 1 -->🐛 Bug Fixes" },
+    { message = "^refactor", group = "<!-- 2 -->🚜 Refactor" },
     { message = "^doc", group = "<!-- 3 -->📚 Documentation" },
     { message = "^perf", group = "<!-- 4 -->⚡ Performance" },
-    { message = "^refactor", group = "<!-- 2 -->🚜 Refactor" },
     { message = "^style", group = "<!-- 5 -->🎨 Styling" },
     { message = "^test", group = "<!-- 6 -->🧪 Testing" },
     { message = "^pkg", group = "<!-- 7 -->📦 Packaging" },
     { message = "^chore|^ci", group = "<!-- 8 -->⚙️ Miscellaneous Tasks" },
     { message = "^security", group = "<!-- 9 -->🛡️ Security" },
     { message = "^revert", group = "<!-- 10 -->◀️ Revert" },
-    { message = ".*", group = "<!-- 11 -->💼 Other" },
+    { message = ".*", group = "<!-- 11 -->💼 Other" }
 ]
 # Exclude commits that are not matched by any commit parser.
 filter_commits = true
