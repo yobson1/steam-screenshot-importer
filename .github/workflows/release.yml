@@ -75,6 +75,7 @@ jobs:
       - name: Create source tarball
         if: matrix.name == 'arch'
         run: |
+          git config --global --add safe.directory "$(pwd)"
           git archive --format=tar.gz --prefix=${{ github.event.repository.name }}-src_${{ steps.version.outputs.version }}/ \
             -o ${{ github.event.repository.name }}-src_${{ steps.version.outputs.version }}.tar.gz ${{ github.ref }}
 
