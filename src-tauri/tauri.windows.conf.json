@@ -1,4 +1,6 @@
 {
+  "$schema": "../node_modules/@tauri-apps/cli-cef/config.schema.json",
+  "identifier": "com.yobson.ssi",
 	"bundle": {
 		"resources": ["./steam_api64.dll", "./dav1d.dll"]
 	}
