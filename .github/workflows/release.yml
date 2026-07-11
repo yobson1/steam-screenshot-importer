@@ -70,6 +70,28 @@ jobs:
         run: |
           sudo -u builder gpg --fetch-keys https://github.com/yobson1.gpg
 
+      - name: Output stripped version
+        if: matrix.name == 'arch'
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Create source tarball
+        if: matrix.name == 'arch'
+        run: |
+          git archive --format=tar.gz --prefix=${{ github.event.repository.name }}-src_${{ steps.version.outputs.version }}/ \
+            -o ${{ github.event.repository.name }}-src_${{ steps.version.outputs.version }}.tar.gz ${{ github.ref }}
+
+      - name: Import GPG key
+        if: matrix.name == 'arch'
+        run: |
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+
+      - name: Sign tarball
+        if: matrix.name == 'arch'
+        run: |
+          gpg --batch --yes --local-user A41EB2986F63F6C40FCF2D03ED26A71EB8EB7A34 --detach-sign --armor \
+            ${{ github.event.repository.name }}-src_${{ steps.version.outputs.version }}.tar.gz
+
       - name: Build Arch package
         if: matrix.name == 'arch'
         run: |
@@ -86,10 +108,8 @@ jobs:
 
           cd pkg/arch
 
-          version="${GITHUB_REF_NAME#v}"
-
           if [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            sed -i "s/^pkgver=.*/pkgver=${version}/" PKGBUILD
+            sed -i "s/^pkgver=.*/pkgver=${{ steps.version.outputs.version }}/" PKGBUILD
             sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
           else
             echo "GITHUB_REF_NAME '${GITHUB_REF_NAME}' does not match vX.Y.Z, leaving pkgver/pkgrel unchanged"
@@ -97,8 +117,16 @@ jobs:
 
           sed -i "s/^_steamworks_rs_ver=.*/_steamworks_rs_ver=${steamworks_rs_ver}/" PKGBUILD
 
+          # The release does not exist yet, so resolve its two future assets from
+          # the workspace while generating checksums and building the package.
+          sed -i 's#${url}/releases/download/v${pkgver}#file://'"${GITHUB_WORKSPACE}"'#' PKGBUILD
+
           sudo -u builder updpkgsums
           sudo -u builder makepkg --syncdeps --noconfirm
+
+          # Keep the checksums generated from the local files, but publish a
+          # PKGBUILD whose sources point at the GitHub release.
+          sed -i 's#file://'"${GITHUB_WORKSPACE}"'#${url}/releases/download/v${pkgver}#' PKGBUILD
 
       - name: Upload PKGBUILD artifact
         if: matrix.name == 'arch'
@@ -116,6 +144,8 @@ jobs:
             pkg/arch/*.pkg.tar.zst
             !pkg/arch/*-debug-*.pkg.tar.zst
             pkg/arch/src/steam-screenshot-importer/src-tauri/target/release/bundle/deb/*.deb
+            ${{ github.event.repository.name }}-src_${{ steps.version.outputs.version }}.tar.gz
+            ${{ github.event.repository.name }}-src_${{ steps.version.outputs.version }}.tar.gz.asc
 
       # ---------------- Rust/Node toolchain (appimage + windows only) ----------------
 
@@ -216,24 +246,6 @@ jobs:
         with:
           path: artifacts
 
-      - name: Output stripped version
-        id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-
-      - name: Create source tarball
-        run: |
-          git archive --format=tar.gz --prefix=${{ github.event.repository.name }}-src_${{ steps.version.outputs.version }}/ \
-            -o ${{ github.event.repository.name }}-src_${{ steps.version.outputs.version }}.tar.gz ${{ github.ref }}
-
-      - name: Import GPG key
-        run: |
-          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
-
-      - name: Sign tarball
-        run: |
-          gpg --batch --yes --local-user A41EB2986F63F6C40FCF2D03ED26A71EB8EB7A34 --detach-sign --armor \
-            ${{ github.event.repository.name }}-src_${{ steps.version.outputs.version }}.tar.gz
-
       - name: Install typos
         uses: taiki-e/install-action@v2
         with:
@@ -251,7 +263,7 @@ jobs:
         run: |
           mapfile -d '' files < <(
             find artifacts -type f \
-              \( -name '*.pkg.tar.zst' -o -name '*.deb' -o -name '*.AppImage' -o -name '*.msi' \) \
+              \( -name '*.pkg.tar.zst' -o -name '*.deb' -o -name '*.AppImage' -o -name '*.msi' -o -name '*.tar.gz' -o -name '*.tar.gz.asc' \) \
               -print0 | sort -z
           )
 
