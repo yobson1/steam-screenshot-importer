@@ -1,9 +1,18 @@
-class DarkMode {
-	value = $state(loadPreferredTheme());
+import { Persisted, asEnum } from './persisted.svelte';
 
-	setTheme(theme: 'light' | 'dark') {
-		this.value = theme === 'dark';
-		localStorage.setItem('theme', theme);
+const theme = new Persisted(
+	'theme',
+	(window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? true) ? 'dark' : 'light',
+	asEnum(['light', 'dark'] as const)
+);
+
+class DarkMode {
+	get value(): boolean {
+		return theme.value === 'dark';
+	}
+
+	setTheme(newTheme: 'light' | 'dark') {
+		theme.set(newTheme);
 	}
 }
 
@@ -15,14 +24,4 @@ export function syncThemeWithDocument() {
 			document.documentElement.dataset.theme = darkModeEnabled.value ? 'dark' : 'light';
 		});
 	});
-}
-
-function loadPreferredTheme(): boolean {
-	const stored = localStorage.getItem('theme');
-
-	if (stored === 'light' || stored === 'dark') {
-		return stored === 'dark';
-	}
-
-	return window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? true;
 }
