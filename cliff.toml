@@ -60,7 +60,7 @@ body = """
     ## Installation
 
     ### Windows
-    - Download & run `{{ remote.github.repo }}_{{ version | trim_start_matches(pat="v") }}_x64_en-US.msi`
+    - Download & run `{{ remote.github.repo | replace(from="-", to=" ") | title }}_{{ version | trim_start_matches(pat="v") }}_x64_en-US.msi`
 
     ### Arch Based Linux Distros
     - Download `{{ remote.github.repo }}-{{ version | trim_start_matches(pat="v") }}-1-x86_64.pkg.tar.zst`
