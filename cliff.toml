@@ -56,19 +56,21 @@ body = """
   {%- endfor -%}
 {%- endif %}
 
-## Installation
+{% if version %}
+    ## Installation
 
-### Windows
-- Download & run `{{ remote.github.repo }}_{{ version | trim_start_matches(pat="v") }}_x64_en-US.msi`
+    ### Windows
+    - Download & run `{{ remote.github.repo }}_{{ version | trim_start_matches(pat="v") }}_x64_en-US.msi`
 
-### Arch Based Linux Distros
-- Download `{{ remote.github.repo }}-{{ version | trim_start_matches(pat="v") }}-1-x86_64.pkg.tar.zst`
-- Install with: `pacman -U {{ remote.github.repo }}-{{ version | trim_start_matches(pat="v") }}-1-x86_64.pkg.tar.zst`
+    ### Arch Based Linux Distros
+    - Download `{{ remote.github.repo }}-{{ version | trim_start_matches(pat="v") }}-1-x86_64.pkg.tar.zst`
+    - Install with: `pacman -U {{ remote.github.repo }}-{{ version | trim_start_matches(pat="v") }}-1-x86_64.pkg.tar.zst`
 
-### Other Linux Distros
-- Download `{{ remote.github.repo }}_{{ version | trim_start_matches(pat="v") }}_amd64.AppImage`
-- Ensure it has execute permissions: `chmod +x {{ remote.github.repo }}_{{ version | trim_start_matches(pat="v") }}_amd64.AppImage`
-- Run the application: `./{{ remote.github.repo }}_{{ version | trim_start_matches(pat="v") }}_amd64.AppImage`
+    ### Other Linux Distros
+    - Download `{{ remote.github.repo }}_{{ version | trim_start_matches(pat="v") }}_amd64.AppImage`
+    - Ensure it has execute permissions: `chmod +x {{ remote.github.repo }}_{{ version | trim_start_matches(pat="v") }}_amd64.AppImage`
+    - Run the application: `./{{ remote.github.repo }}_{{ version | trim_start_matches(pat="v") }}_amd64.AppImage`
+{% endif %}
 
 
 """
