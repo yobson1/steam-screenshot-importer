@@ -62,10 +62,17 @@ jobs:
         run: |
           get-debloated-pkgs --add-common --prefer-nano
 
+      - name: Create unprivileged build user
+        if: matrix.name == 'arch'
+        run: |
+          useradd -m builder
+          echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
+          chown -R builder:builder "$GITHUB_WORKSPACE"
+
       - name: Import PKGBUILD signing key
         if: matrix.name == 'arch'
         run: |
-          gpg --fetch-keys https://github.com/yobson1.gpg
+          sudo -u builder gpg --fetch-keys https://github.com/yobson1.gpg
 
       - name: Output stripped version
         if: matrix.name == 'arch'
@@ -119,8 +126,8 @@ jobs:
           # the workspace while generating checksums and building the package.
           sed -i 's#${url}/releases/download/v${pkgver}#file://'"${GITHUB_WORKSPACE}"'#' PKGBUILD
 
-          updpkgsums
-          makepkg --syncdeps --noconfirm
+          sudo -u builder updpkgsums
+          sudo -u builder makepkg --syncdeps --noconfirm
 
           # Keep the checksums generated from the local files, but publish a
           # PKGBUILD whose sources point at the GitHub release.
