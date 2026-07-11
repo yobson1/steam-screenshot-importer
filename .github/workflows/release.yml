@@ -30,6 +30,10 @@ jobs:
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container }}
     steps:
+      - name: Install Git for checkout
+        if: matrix.name == 'arch'
+        run: pacman -Syu --noconfirm --needed git
+
       - name: Checkout
         uses: actions/checkout@v7
         with:
