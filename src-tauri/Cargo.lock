@@ -5486,6 +5486,8 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-opener",
  "tauri-specta",
+ "toml 1.1.2+spec-1.1.0",
+ "ureq",
  "walkdir",
 ]
 

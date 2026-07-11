@@ -3,7 +3,6 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"fetch-steamworks": "node scripts/fetch-steamworks.mjs",
 		"dev": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
