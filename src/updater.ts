@@ -1,5 +1,6 @@
 import Swal from 'sweetalert2';
 import { marked } from 'marked';
+import DOMPurify from 'dompurify';
 import { getVersion } from '@tauri-apps/api/app';
 import { openUrl } from '@tauri-apps/plugin-opener';
 
@@ -75,7 +76,8 @@ async function runUpdateCheck(manual = false) {
 
 		const div = document.createElement('div');
 		div.className = 'release-notes';
-		div.innerHTML = await marked.parse(manifest.body);
+		const releaseNotesHtml = await marked.parse(manifest.body);
+		div.innerHTML = DOMPurify.sanitize(releaseNotesHtml);
 
 		// so it doesn't take over our webview from clicking any links in the markdown
 		div.addEventListener('click', async (e) => {
