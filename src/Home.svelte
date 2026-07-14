@@ -3,11 +3,16 @@
 	import { commands, type Game } from './bindings';
 	import Swal from 'sweetalert2';
 	import Fuse from 'fuse.js';
+	import { exampleMode, EXAMPLE_STEAM_USER } from './example-mode';
 
 	const SEARCH_DEBOUNCE_MS = 200;
 
-	let gamesPromise = commands.getGames();
-	let steamUserPromise = commands.getRecentSteamUser();
+	let gamesPromise: Promise<Game[]> = exampleMode
+		? import('./example-games').then(({ exampleGames }) => exampleGames)
+		: commands.getGames();
+	let steamUserPromise = exampleMode
+		? Promise.resolve(EXAMPLE_STEAM_USER)
+		: commands.getRecentSteamUser();
 
 	let games = $state<Game[] | null>(null);
 	let gamesError = $state<string | null>(null);

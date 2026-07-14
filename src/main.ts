@@ -3,10 +3,11 @@ import App from './App.svelte';
 import { syncThemeWithDocument } from './stores.svelte';
 import runUpdateCheck from './updater';
 import { screenshotSettings } from './settings.store.svelte';
+import { exampleMode } from './example-mode';
 
 syncThemeWithDocument();
 
-if (screenshotSettings.checkUpdatesOnStartup) {
+if (!exampleMode && screenshotSettings.checkUpdatesOnStartup) {
 	runUpdateCheck();
 }
 

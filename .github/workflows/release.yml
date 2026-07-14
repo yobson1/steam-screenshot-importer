@@ -251,6 +251,27 @@ jobs:
         with:
           path: artifacts
 
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: 11
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Generate application screenshots
+        env:
+          VITE_EXAMPLE_VERSION: ${{ github.ref_name }}
+        run: pnpm screenshots
+
       - name: Install typos
         uses: taiki-e/install-action@v2
         with:
@@ -305,11 +326,11 @@ jobs:
         run: |
           cp artifacts/aur-pkgbuild/PKGBUILD pkg/arch/PKGBUILD
 
-      - name: Commit updated PKGBUILD
+      - name: Commit generated release files
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
-          commit_message: 'chore(pkg): update PKGBUILD for ${{ github.ref_name }}'
-          file_pattern: 'pkg/arch/PKGBUILD'
+          commit_message: 'chore(release): update generated files for ${{ github.ref_name }}'
+          file_pattern: 'pkg/arch/PKGBUILD screenshots/*.png'
           branch: master
 
       - name: Publish to AUR

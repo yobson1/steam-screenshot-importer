@@ -2,8 +2,9 @@
 	import ImgLink from './ImgLink.svelte';
 	import { darkModeEnabled } from './stores.svelte';
 	import { getVersion } from '@tauri-apps/api/app';
+	import { exampleMode, EXAMPLE_VERSION } from './example-mode';
 
-	let versionProm = getVersion();
+	let versionProm = exampleMode ? Promise.resolve(EXAMPLE_VERSION) : getVersion();
 
 	let version: HTMLParagraphElement;
 	let augh = new Audio('/easter/juiced.mp3');
