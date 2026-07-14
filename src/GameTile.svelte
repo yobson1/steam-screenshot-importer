@@ -64,8 +64,8 @@
 		text-align: center;
 		float: left;
 		user-select: none;
-		width: 210px;
-		height: 315px;
+		width: 212px;
+		height: 318px;
 		cursor: pointer;
 		box-sizing: border-box;
 		margin: 1rem;
@@ -90,8 +90,8 @@
 	}
 
 	img {
-		width: 210px;
-		height: 315px;
+		width: 100%;
+		height: 100%;
 		user-select: none;
 		pointer-events: none;
 		transition: filter 0.8s;
