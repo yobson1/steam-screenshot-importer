@@ -70,11 +70,13 @@ Currently only distributing/testing for Win64 and Arch based Linux distros
 
 ![Screenshot](screenshots/appid.png)
 
+![Screenshot](screenshots/settings.png)
+
+![Screenshot](screenshots/about.png)
+
 ![Screenshot](screenshots/import_dialogue.png)
 
 ![Screenshot](screenshots/steam_import.png)
-
-![Screenshot](screenshots/about.png)
 
 ## Light theme
 
