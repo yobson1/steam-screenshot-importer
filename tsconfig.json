@@ -13,6 +13,7 @@
 		"src/**/*.ts",
 		"src/**/*.svelte",
 		"tests/**/*.ts",
+		"vite/**/*.ts",
 		"playwright.config.ts"
 	],
 	"exclude": ["node_modules/*", "public/*", "pkg/**", "src/**/*.js"]
