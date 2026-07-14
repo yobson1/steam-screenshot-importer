@@ -13,6 +13,10 @@ concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  NODE_VERSION: '24'
+  PNPM_VERSION: '11.11.0'
+
 jobs:
   build:
     strategy:
@@ -168,13 +172,13 @@ jobs:
         if: matrix.name == 'windows'
         uses: actions/setup-node@v5
         with:
-          node-version: 24
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: Setup pnpm
         if: matrix.name == 'windows'
         uses: pnpm/action-setup@v6
         with:
-          version: 11
+          version: ${{ env.PNPM_VERSION }}
 
       - name: Install frontend dependencies
         if: matrix.name != 'arch'
@@ -254,12 +258,12 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
-          node-version: 24
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
         with:
-          version: 11
+          version: ${{ env.PNPM_VERSION }}
 
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
