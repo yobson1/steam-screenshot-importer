@@ -23,6 +23,11 @@
 		top: 0.5rem;
 		z-index: 1;
 		width: calc(100% - (var(--body-padding) * 2));
+		pointer-events: none;
+	}
+
+	nav > :global(*) {
+		pointer-events: auto;
 	}
 
 	nav {
