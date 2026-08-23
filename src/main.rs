@@ -3,10 +3,12 @@
     windows_subsystem = "windows"
 )]
 
+mod app_dirs;
 mod components;
 mod fallback_artwork;
 mod image_fetch;
 mod offscreen;
+mod preferences;
 mod steam_locate;
 
 use std::{
@@ -162,9 +164,11 @@ impl SteamScreenshotImporter {
 
         let now = Instant::now();
         let appearance_subscription = cx.observe_window_appearance(window, |_, window, cx| {
-            Theme::sync_system_appearance(Some(window), cx);
-            Theme::set_scrollbar_mode(ScrollbarMode::Always, cx);
-            cx.notify();
+            if preferences::selected_theme(cx).is_none() {
+                Theme::sync_system_appearance(Some(window), cx);
+                Theme::set_scrollbar_mode(ScrollbarMode::Always, cx);
+                cx.notify();
+            }
         });
         Self {
             cards: Vec::new(),
@@ -508,7 +512,11 @@ fn configure_themes(cx: &mut App) {
     let theme = Theme::global_mut(cx);
     theme.light_theme = light;
     theme.dark_theme = dark;
-    Theme::sync_system_appearance(None, cx);
+    if let Some(mode) = preferences::selected_theme(cx) {
+        Theme::change(mode, None, cx);
+    } else {
+        Theme::sync_system_appearance(None, cx);
+    }
     Theme::set_scrollbar_mode(ScrollbarMode::Always, cx);
 }
 
@@ -521,6 +529,7 @@ fn main() {
         .with_assets(gpui_component_assets::Assets)
         .run(|cx: &mut App| {
             gpui_component::init(cx);
+            preferences::init(cx);
             configure_themes(cx);
             let bounds = Bounds::centered(None, size(px(1280.0), px(800.0)), cx);
             cx.open_window(
@@ -534,7 +543,11 @@ fn main() {
                     ..Default::default()
                 },
                 |window, cx| {
-                    Theme::sync_system_appearance(Some(window), cx);
+                    if let Some(mode) = preferences::selected_theme(cx) {
+                        Theme::change(mode, Some(window), cx);
+                    } else {
+                        Theme::sync_system_appearance(Some(window), cx);
+                    }
                     Theme::set_scrollbar_mode(ScrollbarMode::Always, cx);
                     cx.new(|cx| SteamScreenshotImporter::new(window, cx))
                 },
