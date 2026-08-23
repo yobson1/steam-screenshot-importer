@@ -37,7 +37,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     if std::env::var_os("NO_STEAMWORKS").is_some() {
         println!("cargo:warning=NO_STEAMWORKS set, skipping Steamworks binary fetch");
-        tauri_build::build();
         return Ok(());
     }
 
@@ -47,7 +46,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let library_name = library_name(remote_path)?;
 
     fetch_steamworks(remote_path, library_name, &target_os, &target_arch)?;
-    tauri_build::build();
 
     Ok(())
 }
@@ -139,12 +137,17 @@ fn update_link(link: &Path, target: &Path) -> Result<(), Box<dyn std::error::Err
         fs::remove_file(link)?;
     }
 
-    #[cfg(unix)]
-    symlink(target, link)?;
-    #[cfg(windows)]
-    symlink_file(target, link)?;
+    let link_target = link
+        .parent()
+        .and_then(|parent| target.strip_prefix(parent).ok())
+        .unwrap_or(target);
 
-    println!("{} -> {}", link.display(), target.display());
+    #[cfg(unix)]
+    symlink(link_target, link)?;
+    #[cfg(windows)]
+    symlink_file(link_target, link)?;
+
+    println!("{} -> {}", link.display(), link_target.display());
 
     Ok(())
 }

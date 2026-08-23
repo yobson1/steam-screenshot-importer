@@ -1,9 +1,10 @@
 use log::{error, info};
+use reqwest::blocking::Client;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
-static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+static HTTP_CLIENT: OnceLock<Client> = OnceLock::new();
 const STORE_ITEMS_CHUNK_SIZE: usize = 100;
 
 #[derive(Deserialize)]
@@ -30,21 +31,21 @@ struct StoreItemAssets {
     library_capsule: Option<String>,
 }
 
-fn http_client() -> &'static reqwest::Client {
-    HTTP_CLIENT.get_or_init(reqwest::Client::new)
+fn http_client() -> &'static Client {
+    HTTP_CLIENT.get_or_init(Client::new)
 }
 
-pub async fn get_library_images(app_ids: &[u32]) -> HashMap<u32, String> {
+pub fn get_library_images(app_ids: &[u32]) -> HashMap<u32, String> {
     let mut image_urls = HashMap::new();
 
     for app_ids in app_ids.chunks(STORE_ITEMS_CHUNK_SIZE) {
-        image_urls.extend(get_library_images_chunk(app_ids).await);
+        image_urls.extend(get_library_images_chunk(app_ids));
     }
 
     image_urls
 }
 
-async fn get_library_images_chunk(app_ids: &[u32]) -> HashMap<u32, String> {
+fn get_library_images_chunk(app_ids: &[u32]) -> HashMap<u32, String> {
     if app_ids.is_empty() {
         return HashMap::new();
     }
@@ -67,7 +68,6 @@ async fn get_library_images_chunk(app_ids: &[u32]) -> HashMap<u32, String> {
         .get("https://api.steampowered.com/IStoreBrowseService/GetItems/v1/")
         .query(&[("input_json", input.to_string())])
         .send()
-        .await
     {
         Ok(response) => response,
         Err(error) => {
@@ -89,7 +89,7 @@ async fn get_library_images_chunk(app_ids: &[u32]) -> HashMap<u32, String> {
         return HashMap::new();
     }
 
-    let response_body = match response.text().await {
+    let response_body = match response.text() {
         Ok(response_body) => response_body,
         Err(error) => {
             error!(
@@ -120,6 +120,18 @@ async fn get_library_images_chunk(app_ids: &[u32]) -> HashMap<u32, String> {
         .filter_map(library_image_url)
         .inspect(|(app_id, url)| info!("Resolved URL for AppID {app_id}: {url}"))
         .collect()
+}
+
+pub fn download_image(url: &str) -> Option<Vec<u8>> {
+    let response = http_client().get(url).send().ok()?;
+    if !response.status().is_success() {
+        error!(
+            "Steam artwork request returned HTTP {} for {url}",
+            response.status()
+        );
+        return None;
+    }
+    response.bytes().ok().map(|bytes| bytes.to_vec())
 }
 
 fn library_image_url(store_item: StoreItem) -> Option<(u32, String)> {

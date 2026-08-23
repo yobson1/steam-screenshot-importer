@@ -1,7 +1,5 @@
 use crate::image_fetch;
-use base64::{Engine as _, engine::general_purpose::STANDARD_NO_PAD};
 use log::info;
-use serde::Serialize;
 use std::fs::read;
 use std::path::{Path, PathBuf};
 use steamy_vdf as vdf;
@@ -9,17 +7,23 @@ use walkdir::WalkDir;
 
 const LIB_CACHE_PATH: &str = "appcache/librarycache/";
 
-#[derive(Serialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug)]
 pub struct Game {
-    app_id: u32,
-    image_src: String,
-    app_name: String,
+    pub app_id: u32,
+    pub artwork: GameArtwork,
+    pub app_name: String,
+}
+
+#[derive(Debug)]
+pub enum GameArtwork {
+    Bytes(Vec<u8>),
+    Url(String),
+    Missing,
 }
 
 struct LocalGame {
     app_id: u32,
-    image_src: Option<String>,
+    artwork: Option<Vec<u8>>,
     app_name: String,
 }
 
@@ -40,28 +44,31 @@ fn find_library_capsule(steam_path: &Path, appid: u32) -> Option<PathBuf> {
     None
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn get_games() -> Result<Vec<Game>, String> {
+pub fn get_games() -> Result<Vec<Game>, String> {
     let games = get_local_games()?;
     let missing_app_ids: Vec<u32> = games
         .iter()
-        .filter(|game| game.image_src.is_none())
+        .filter(|game| game.artwork.is_none())
         .map(|game| game.app_id)
         .collect();
-    let fetched_images = image_fetch::get_library_images(&missing_app_ids).await;
+    let fetched_images = image_fetch::get_library_images(&missing_app_ids);
 
     Ok(games
         .into_iter()
         .map(|game| {
-            let image_src = game
-                .image_src
-                .or_else(|| fetched_images.get(&game.app_id).cloned())
-                .unwrap_or_default();
+            let artwork = game.artwork.map_or_else(
+                || {
+                    fetched_images
+                        .get(&game.app_id)
+                        .cloned()
+                        .map_or(GameArtwork::Missing, GameArtwork::Url)
+                },
+                GameArtwork::Bytes,
+            );
 
             Game {
                 app_id: game.app_id,
-                image_src,
+                artwork,
                 app_name: game.app_name,
             }
         })
@@ -90,16 +97,14 @@ fn get_local_games() -> Result<Vec<LocalGame>, String> {
             continue;
         };
 
-        let image_src = find_library_capsule(steam_path, app.app_id)
-            .and_then(|path| {
-                info!("Found image path: {}", path.display());
-                read(path).ok()
-            })
-            .map(|img| format!("data:image/jpeg;base64,{}", STANDARD_NO_PAD.encode(img)));
+        let artwork = find_library_capsule(steam_path, app.app_id).and_then(|path| {
+            info!("Found image path: {}", path.display());
+            read(path).ok()
+        });
 
         games.push(LocalGame {
             app_id: app.app_id,
-            image_src,
+            artwork,
             app_name,
         });
     }
@@ -107,8 +112,6 @@ fn get_local_games() -> Result<Vec<LocalGame>, String> {
     Ok(games)
 }
 
-#[tauri::command]
-#[specta::specta]
 pub fn get_recent_steam_user() -> Result<String, String> {
     let steam_dir = steamlocate::locate().map_err(|_| "Failed to locate Steam installation")?;
     let steam_path = steam_dir.path();
