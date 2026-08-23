@@ -130,7 +130,6 @@ struct SteamScreenshotImporter {
     cards: Vec<CardState>,
     offscreen: OffscreenRenderer,
     retired_images: Vec<Arc<RenderImage>>,
-    selected: Option<usize>,
     steam_user: Option<String>,
     library_state: LibraryState,
     last_frame: Instant,
@@ -164,7 +163,6 @@ impl SteamScreenshotImporter {
             offscreen: OffscreenRenderer::new()
                 .expect("failed to initialize offscreen WGPU card renderer"),
             retired_images: Vec::new(),
-            selected: None,
             steam_user: None,
             library_state: LibraryState::Loading,
             last_frame: now,
@@ -299,31 +297,17 @@ impl SteamScreenshotImporter {
                 card.motion.pointer_target = pointer_in_bounds(event.position, card.bounds.get());
                 cx.notify();
             }),
-            cx.listener(move |this, _, _, cx| {
-                this.selected = Some(index);
+            cx.listener(move |_, _, _, _| {
                 info!("Selected Steam app {app_id}");
-                cx.notify();
             }),
         )
     }
 
-    fn status_text(&self) -> String {
-        if let Some(index) = self.selected {
-            let card = &self.cards[index];
-            return format!("Selected {} (AppID {})", card.app_name, card.app_id);
-        }
-
-        match &self.library_state {
-            LibraryState::Loading => "Finding games in your Steam library…".to_owned(),
-            LibraryState::Ready if self.cards.is_empty() => {
-                "No installed Steam games were found.".to_owned()
-            }
-            LibraryState::Ready => self.steam_user.as_ref().map_or_else(
-                || format!("{} installed games", self.cards.len()),
-                |user| format!("{} installed games for {user}", self.cards.len()),
-            ),
-            LibraryState::Failed(message) => message.clone(),
-        }
+    fn welcome_text(&self) -> String {
+        self.steam_user.as_ref().map_or_else(
+            || "WELCOME USER!".to_owned(),
+            |user| format!("WELCOME {}!", user.to_uppercase()),
+        )
     }
 }
 
@@ -336,6 +320,14 @@ impl Render for SteamScreenshotImporter {
         let cards = (0..self.cards.len())
             .map(|index| self.render_card(index, cx).into_any_element())
             .collect::<Vec<_>>();
+        let library_message = match &self.library_state {
+            LibraryState::Loading => Some("Fetching games.".to_owned()),
+            LibraryState::Ready if self.cards.is_empty() => {
+                Some("No installed Steam games were found.".to_owned())
+            }
+            LibraryState::Failed(message) => Some(format!("Error: {message}")),
+            LibraryState::Ready => None,
+        };
 
         let content = div()
             .relative()
@@ -351,21 +343,14 @@ impl Render for SteamScreenshotImporter {
                     .pt_6()
                     .pb_2()
                     .flex()
-                    .flex_col()
                     .items_center()
-                    .gap_2()
+                    .justify_center()
                     .child(
                         div()
                             .text_size(px(40.0))
                             .font_weight(gpui::FontWeight::THIN)
                             .text_color(rgb(0x00eb_6841))
-                            .child("STEAM SCREENSHOT IMPORTER"),
-                    )
-                    .child(
-                        div()
-                            .text_sm()
-                            .text_color(rgb(0x008d_9299))
-                            .child(self.status_text()),
+                            .child(self.welcome_text()),
                     ),
             )
             .child(
@@ -383,6 +368,16 @@ impl Render for SteamScreenshotImporter {
                             .flex_wrap()
                             .justify_center()
                             .items_start()
+                            .when_some(library_message, |gallery, message| {
+                                gallery.child(
+                                    div()
+                                        .w_full()
+                                        .text_center()
+                                        .text_sm()
+                                        .text_color(rgb(0x008d_9299))
+                                        .child(message),
+                                )
+                            })
                             .children(cards),
                     ),
             );
