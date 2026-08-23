@@ -4,6 +4,7 @@
 )]
 
 mod components;
+mod fallback_artwork;
 mod image_fetch;
 mod offscreen;
 mod steam_locate;
@@ -48,11 +49,9 @@ struct LoadedLibrary {
 
 struct CardState {
     app_id: u32,
-    app_name: String,
     artwork_handle: usize,
     artwork: Arc<RenderImage>,
     artwork_is_projected: bool,
-    missing_artwork: bool,
     desired_vertices: [ProjectedVertex; 4],
     desired_generation: u64,
     applied_generation: u64,
@@ -180,11 +179,9 @@ impl SteamScreenshotImporter {
                 let artwork_handle = self.offscreen.upload_artwork(&game.pixels);
                 CardState {
                     app_id: game.app_id,
-                    app_name: game.app_name,
                     artwork_handle,
                     artwork: render_image_from_bgra(game.pixels),
                     artwork_is_projected: false,
-                    missing_artwork: game.missing_artwork,
                     desired_vertices: offscreen_vertices(Pointer::default(), 0.0),
                     desired_generation: 0,
                     applied_generation: 0,
@@ -270,10 +267,8 @@ impl SteamScreenshotImporter {
         let card = &self.cards[index];
         let props = GameTileProps {
             index,
-            app_name: card.app_name.clone(),
             artwork: card.artwork.clone(),
             artwork_is_projected: card.artwork_is_projected,
-            missing_artwork: card.missing_artwork,
             bounds: card.bounds.clone(),
             pointer: card.motion.pointer,
             hover: card.motion.hover,
@@ -416,7 +411,7 @@ fn load_steam_library() -> Result<LoadedLibrary, String> {
         .ok()
         .filter(|user| !user.is_empty());
     let games = steam_locate::get_games()?;
-    let games = games
+    let mut games = games
         .into_par_iter()
         .map(|game| {
             let artwork_bytes = match game.artwork {
@@ -436,7 +431,17 @@ fn load_steam_library() -> Result<LoadedLibrary, String> {
                 missing_artwork,
             }
         })
-        .collect();
+        .collect::<Vec<_>>();
+
+    if games.iter().any(|game| game.missing_artwork) {
+        let mut title_renderer = fallback_artwork::TitleRenderer::new();
+        for game in &mut games {
+            if game.missing_artwork {
+                title_renderer.composite_title(&mut game.pixels, &game.app_name);
+            }
+        }
+    }
+
     Ok(LoadedLibrary { games, steam_user })
 }
 
@@ -453,11 +458,8 @@ fn decode_artwork(bytes: &[u8]) -> Option<RgbaImage> {
 }
 
 fn placeholder_artwork() -> RgbaImage {
-    RgbaImage::from_pixel(
-        ARTWORK_WIDTH,
-        ARTWORK_HEIGHT,
-        image::Rgba([0x2a, 0x2a, 0x2a, 0xff]),
-    )
+    decode_artwork(include_bytes!("../assets/defaultappimage.png"))
+        .expect("bundled default game artwork should decode")
 }
 
 fn rgba_to_bgra(pixels: &mut RgbaImage) {

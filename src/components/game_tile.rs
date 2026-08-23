@@ -3,7 +3,7 @@ use std::{cell::Cell, rc::Rc, sync::Arc, time::Duration};
 use gpui::{
     App, Bounds, BoxShadow, ClickEvent, Corners, MouseMoveEvent, PathBuilder, Pixels, Point,
     RenderImage, Window, canvas, div, hsla, linear_color_stop, linear_gradient, point, prelude::*,
-    px, rgb, size,
+    px, size,
 };
 
 use crate::offscreen::{OUTPUT_HEIGHT_F32, OUTPUT_WIDTH_F32, ProjectedVertex};
@@ -73,10 +73,8 @@ impl GameTileMotion {
 
 pub struct GameTileProps {
     pub index: usize,
-    pub app_name: String,
     pub artwork: Arc<RenderImage>,
     pub artwork_is_projected: bool,
-    pub missing_artwork: bool,
     pub bounds: Rc<Cell<Bounds<Pixels>>>,
     pub pointer: Pointer,
     pub hover: f32,
@@ -91,7 +89,6 @@ pub fn game_tile(
 ) -> impl IntoElement {
     let left = (SLOT_WIDTH - CARD_WIDTH) * 0.5;
     let top = (SLOT_HEIGHT - CARD_HEIGHT) * 0.5;
-    let app_name = props.app_name.clone();
 
     div()
         .relative()
@@ -115,23 +112,6 @@ pub fn game_tile(
                     props.hover,
                     props.glare,
                 ))
-                .when(props.missing_artwork, |tile| {
-                    tile.child(
-                        div()
-                            .absolute()
-                            .left_0()
-                            .top_0()
-                            .size_full()
-                            .px_4()
-                            .flex()
-                            .items_center()
-                            .justify_center()
-                            .text_center()
-                            .text_xl()
-                            .text_color(rgb(0x00b9_c2cc))
-                            .child(app_name),
-                    )
-                })
                 .on_hover(on_hover)
                 .on_mouse_move(on_mouse_move)
                 .on_click(on_click),

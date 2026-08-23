@@ -28,6 +28,7 @@ ureq = "3"
 anyhow = "1"
 atomic_float = "1.1"
 bytemuck = { version = "1", features = ["derive"] }
+cosmic-text = "0.19"
 directories = "6.0"
 gpui = { git = "https://github.com/zed-industries/zed" }
 gpui_platform = { git = "https://github.com/zed-industries/zed", features = ["wayland", "x11"] }

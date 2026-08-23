@@ -5762,6 +5762,7 @@ dependencies = [
  "anyhow",
  "atomic_float",
  "bytemuck",
+ "cosmic-text",
  "directories",
  "gpui",
  "gpui_platform",
