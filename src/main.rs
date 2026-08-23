@@ -333,8 +333,8 @@ impl Render for SteamScreenshotImporter {
         let primary = cx.theme().primary;
         let muted_foreground = cx.theme().muted_foreground;
 
-        let content = div()
-            .relative()
+        let page = div()
+            .id("main-page-scroll")
             .size_full()
             .flex()
             .flex_col()
@@ -359,33 +359,29 @@ impl Render for SteamScreenshotImporter {
             )
             .child(
                 div()
-                    .id("game-library-scroll")
-                    .flex_1()
-                    .min_h_0()
+                    .id("game-library")
                     .w_full()
-                    .child(
-                        div()
-                            .w_full()
-                            .px_5()
-                            .pb_8()
-                            .flex()
-                            .flex_wrap()
-                            .justify_center()
-                            .items_start()
-                            .when_some(library_message, |gallery, message| {
-                                gallery.child(
-                                    div()
-                                        .w_full()
-                                        .text_center()
-                                        .text_sm()
-                                        .text_color(muted_foreground)
-                                        .child(message),
-                                )
-                            })
-                            .children(cards),
-                    )
-                    .overflow_y_scrollbar(),
-            );
+                    .px_5()
+                    .pb_8()
+                    .flex()
+                    .flex_wrap()
+                    .justify_center()
+                    .items_start()
+                    .when_some(library_message, |gallery, message| {
+                        gallery.child(
+                            div()
+                                .w_full()
+                                .text_center()
+                                .text_sm()
+                                .text_color(muted_foreground)
+                                .child(message),
+                        )
+                    })
+                    .children(cards),
+            )
+            .overflow_y_scrollbar();
+
+        let content = div().relative().size_full().bg(background).child(page);
 
         #[cfg(debug_assertions)]
         let content = content.child(
