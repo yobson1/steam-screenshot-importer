@@ -45,7 +45,9 @@ steamlocate = "2.1"
 steamy-vdf = "0.2"
 steamworks = { version = "0.13", features = ["raw-bindings"] }
 walkdir = "2.5"
-wgpu = "29.0.4"
+wgpu = "29"
+gpui-component = { git = "https://github.com/longbridge/gpui-component" }
+gpui-component-assets = { git = "https://github.com/longbridge/gpui-component" }
 
 [profile.dev]
 debug = "limited"

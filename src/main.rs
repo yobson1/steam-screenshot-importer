@@ -20,11 +20,13 @@ use components::game_tile::{
     GameTileMotion, GameTileProps, Pointer, game_tile, offscreen_vertices, pointer_in_bounds,
     projected_vertices_changed,
 };
-#[cfg(debug_assertions)]
-use gpui::hsla;
 use gpui::{
     App, Bounds, Context, MouseMoveEvent, Pixels, Render, RenderImage, Window, WindowBounds,
-    WindowOptions, div, prelude::*, px, rgb, size,
+    WindowOptions, div, hsla, prelude::*, px, rgb, size,
+};
+use gpui_component::{
+    ActiveTheme as _, Theme, ThemeMode,
+    scroll::{ScrollableElement as _, ScrollbarMode},
 };
 use image::{Frame, RgbaImage, imageops::FilterType};
 use log::{error, info};
@@ -326,14 +328,18 @@ impl Render for SteamScreenshotImporter {
             LibraryState::Failed(message) => Some(format!("Error: {message}")),
             LibraryState::Ready => None,
         };
+        let background = cx.theme().background;
+        let foreground = cx.theme().foreground;
+        let primary = cx.theme().primary;
+        let muted_foreground = cx.theme().muted_foreground;
 
         let content = div()
             .relative()
             .size_full()
             .flex()
             .flex_col()
-            .bg(rgb(0x001f_2022))
-            .text_color(rgb(0x00bf_c2c7))
+            .bg(background)
+            .text_color(foreground)
             .child(
                 div()
                     .flex_none()
@@ -347,7 +353,7 @@ impl Render for SteamScreenshotImporter {
                         div()
                             .text_size(px(40.0))
                             .font_weight(gpui::FontWeight::THIN)
-                            .text_color(rgb(0x00eb_6841))
+                            .text_color(primary)
                             .child(self.welcome_text()),
                     ),
             )
@@ -355,8 +361,8 @@ impl Render for SteamScreenshotImporter {
                 div()
                     .id("game-library-scroll")
                     .flex_1()
+                    .min_h_0()
                     .w_full()
-                    .overflow_y_scroll()
                     .child(
                         div()
                             .w_full()
@@ -372,12 +378,13 @@ impl Render for SteamScreenshotImporter {
                                         .w_full()
                                         .text_center()
                                         .text_sm()
-                                        .text_color(rgb(0x008d_9299))
+                                        .text_color(muted_foreground)
                                         .child(message),
                                 )
                             })
                             .children(cards),
-                    ),
+                    )
+                    .overflow_y_scrollbar(),
             );
 
         #[cfg(debug_assertions)]
@@ -389,11 +396,11 @@ impl Render for SteamScreenshotImporter {
                 .px_3()
                 .py_2()
                 .rounded_md()
-                .bg(hsla(0.0, 0.0, 0.05, 0.82))
+                .bg(cx.theme().popover.opacity(0.82))
                 .border_1()
-                .border_color(hsla(0.0, 0.0, 1.0, 0.12))
+                .border_color(cx.theme().border)
                 .text_xs()
-                .text_color(rgb(0x00e3_e5e8))
+                .text_color(foreground)
                 .flex()
                 .flex_col()
                 .items_end()
@@ -478,6 +485,20 @@ fn main() {
         .init();
 
     gpui_platform::application().run(|cx: &mut App| {
+        gpui_component::init(cx);
+        Theme::change(ThemeMode::Dark, None, cx);
+        {
+            let theme = Theme::global_mut(cx);
+            theme.background = rgb(0x001f_2022).into();
+            theme.foreground = rgb(0x00bf_c2c7).into();
+            theme.primary = rgb(0x00eb_6841).into();
+            theme.muted_foreground = rgb(0x008d_9299).into();
+            theme.scrollbar = hsla(0.0, 0.0, 1.0, 0.06);
+            theme.scrollbar_thumb = hsla(0.0, 0.0, 1.0, 0.28);
+            theme.scrollbar_thumb_hover = hsla(0.0, 0.0, 1.0, 0.45);
+            theme.scrollbar_mode = ScrollbarMode::Always;
+        }
+        Theme::sync_base(cx);
         let bounds = Bounds::centered(None, size(px(1280.0), px(800.0)), cx);
         cx.open_window(
             WindowOptions {
