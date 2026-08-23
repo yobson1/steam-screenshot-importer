@@ -315,7 +315,10 @@ impl Render for SteamScreenshotImporter {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.tick_cards(window);
         #[cfg(debug_assertions)]
-        self.frame_stats.record_frame(Instant::now());
+        {
+            self.frame_stats.record_frame(Instant::now());
+            window.request_animation_frame();
+        }
 
         let cards = (0..self.cards.len())
             .map(|index| self.render_card(index, cx).into_any_element())
