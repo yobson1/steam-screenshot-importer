@@ -135,12 +135,13 @@ struct SteamScreenshotImporter {
     steam_user: Option<String>,
     library_state: LibraryState,
     last_frame: Instant,
+    _appearance_subscription: gpui::Subscription,
     #[cfg(debug_assertions)]
     frame_stats: FrameStats,
 }
 
 impl SteamScreenshotImporter {
-    fn new(cx: &mut Context<Self>) -> Self {
+    fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
         let load_task = cx.background_spawn(async { load_steam_library() });
         cx.spawn(async move |this, cx| {
             let result = load_task.await;
@@ -160,6 +161,11 @@ impl SteamScreenshotImporter {
         .detach();
 
         let now = Instant::now();
+        let appearance_subscription = cx.observe_window_appearance(window, |_, window, cx| {
+            Theme::sync_system_appearance(Some(window), cx);
+            Theme::set_scrollbar_mode(ScrollbarMode::Always, cx);
+            cx.notify();
+        });
         Self {
             cards: Vec::new(),
             offscreen: OffscreenRenderer::new()
@@ -168,6 +174,7 @@ impl SteamScreenshotImporter {
             steam_user: None,
             library_state: LibraryState::Loading,
             last_frame: now,
+            _appearance_subscription: appearance_subscription,
             #[cfg(debug_assertions)]
             frame_stats: FrameStats::new(now),
         }
@@ -529,7 +536,7 @@ fn main() {
                 |window, cx| {
                     Theme::sync_system_appearance(Some(window), cx);
                     Theme::set_scrollbar_mode(ScrollbarMode::Always, cx);
-                    cx.new(SteamScreenshotImporter::new)
+                    cx.new(|cx| SteamScreenshotImporter::new(window, cx))
                 },
             )
             .expect("failed to open Steam Screenshot Importer window");
