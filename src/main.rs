@@ -20,12 +20,13 @@ use components::game_tile::{
     GameTileMotion, GameTileProps, Pointer, game_tile, offscreen_vertices, pointer_in_bounds,
     projected_vertices_changed,
 };
+use components::theme_toggle::theme_toggle;
 use gpui::{
     App, Bounds, Context, MouseMoveEvent, Pixels, Render, RenderImage, Window, WindowBounds,
-    WindowOptions, div, hsla, prelude::*, px, rgb, size,
+    WindowOptions, div, prelude::*, px, size,
 };
 use gpui_component::{
-    ActiveTheme as _, Theme, ThemeMode,
+    ActiveTheme as _, Theme, ThemeRegistry,
     scroll::{ScrollableElement as _, ScrollbarMode},
 };
 use image::{Frame, RgbaImage, imageops::FilterType};
@@ -381,13 +382,18 @@ impl Render for SteamScreenshotImporter {
             )
             .overflow_y_scrollbar();
 
-        let content = div().relative().size_full().bg(background).child(page);
+        let content = div()
+            .relative()
+            .size_full()
+            .bg(background)
+            .child(page)
+            .child(theme_toggle(cx.theme().is_dark()));
 
         #[cfg(debug_assertions)]
         let content = content.child(
             div()
                 .absolute()
-                .top_4()
+                .top(px(64.0))
                 .right_4()
                 .px_3()
                 .py_2()
@@ -475,42 +481,60 @@ fn render_image_from_bgra(pixels: RgbaImage) -> Arc<RenderImage> {
     Arc::new(RenderImage::new(vec![Frame::new(pixels)]))
 }
 
+fn configure_themes(cx: &mut App) {
+    ThemeRegistry::global_mut(cx)
+        .load_themes_from_str(include_str!("../assets/themes/ayu.json"))
+        .expect("bundled Ayu themes should parse");
+
+    let registry = ThemeRegistry::global(cx);
+    let light = registry
+        .themes()
+        .get("Ayu Light")
+        .cloned()
+        .expect("bundled Ayu Light theme should be registered");
+    let dark = registry
+        .themes()
+        .get("Ayu Dark")
+        .cloned()
+        .expect("bundled Ayu Dark theme should be registered");
+
+    let theme = Theme::global_mut(cx);
+    theme.light_theme = light;
+    theme.dark_theme = dark;
+    Theme::sync_system_appearance(None, cx);
+    Theme::set_scrollbar_mode(ScrollbarMode::Always, cx);
+}
+
 fn main() {
     let _ = simple_logger::SimpleLogger::new()
         .with_level(log::LevelFilter::Info)
         .init();
 
-    gpui_platform::application().run(|cx: &mut App| {
-        gpui_component::init(cx);
-        Theme::change(ThemeMode::Dark, None, cx);
-        {
-            let theme = Theme::global_mut(cx);
-            theme.background = rgb(0x001f_2022).into();
-            theme.foreground = rgb(0x00bf_c2c7).into();
-            theme.primary = rgb(0x00eb_6841).into();
-            theme.muted_foreground = rgb(0x008d_9299).into();
-            theme.scrollbar = hsla(0.0, 0.0, 1.0, 0.06);
-            theme.scrollbar_thumb = hsla(0.0, 0.0, 1.0, 0.28);
-            theme.scrollbar_thumb_hover = hsla(0.0, 0.0, 1.0, 0.45);
-            theme.scrollbar_mode = ScrollbarMode::Always;
-        }
-        Theme::sync_base(cx);
-        let bounds = Bounds::centered(None, size(px(1280.0), px(800.0)), cx);
-        cx.open_window(
-            WindowOptions {
-                window_bounds: Some(WindowBounds::Windowed(bounds)),
-                titlebar: Some(gpui::TitlebarOptions {
-                    title: Some("Steam Screenshot Importer".into()),
+    gpui_platform::application()
+        .with_assets(gpui_component_assets::Assets)
+        .run(|cx: &mut App| {
+            gpui_component::init(cx);
+            configure_themes(cx);
+            let bounds = Bounds::centered(None, size(px(1280.0), px(800.0)), cx);
+            cx.open_window(
+                WindowOptions {
+                    window_bounds: Some(WindowBounds::Windowed(bounds)),
+                    titlebar: Some(gpui::TitlebarOptions {
+                        title: Some("Steam Screenshot Importer".into()),
+                        ..Default::default()
+                    }),
+                    focus: true,
                     ..Default::default()
-                }),
-                focus: true,
-                ..Default::default()
-            },
-            |_, cx| cx.new(SteamScreenshotImporter::new),
-        )
-        .expect("failed to open Steam Screenshot Importer window");
-        cx.activate(true);
-    });
+                },
+                |window, cx| {
+                    Theme::sync_system_appearance(Some(window), cx);
+                    Theme::set_scrollbar_mode(ScrollbarMode::Always, cx);
+                    cx.new(SteamScreenshotImporter::new)
+                },
+            )
+            .expect("failed to open Steam Screenshot Importer window");
+            cx.activate(true);
+        });
 }
 
 #[cfg(test)]
