@@ -483,20 +483,20 @@ fn render_image_from_bgra(pixels: RgbaImage) -> Arc<RenderImage> {
 
 fn configure_themes(cx: &mut App) {
     ThemeRegistry::global_mut(cx)
-        .load_themes_from_str(include_str!("../assets/themes/ayu.json"))
-        .expect("bundled Ayu themes should parse");
+        .load_themes_from_str(include_str!("../assets/themes/macos-classic.json"))
+        .expect("bundled macOS Classic themes should parse");
 
     let registry = ThemeRegistry::global(cx);
     let light = registry
         .themes()
-        .get("Ayu Light")
+        .get("macOS Classic Light")
         .cloned()
-        .expect("bundled Ayu Light theme should be registered");
+        .expect("bundled macOS Classic Light theme should be registered");
     let dark = registry
         .themes()
-        .get("Ayu Dark")
+        .get("macOS Classic Dark")
         .cloned()
-        .expect("bundled Ayu Dark theme should be registered");
+        .expect("bundled macOS Classic Dark theme should be registered");
 
     let theme = Theme::global_mut(cx);
     theme.light_theme = light;
