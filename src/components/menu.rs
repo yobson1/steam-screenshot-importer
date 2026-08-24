@@ -269,7 +269,7 @@ impl Menu {
         .detach();
     }
 
-    fn navigate(&mut self, item: NavItem, cx: &mut Context<Self>) {
+    fn navigate(item: NavItem, cx: &mut Context<Self>) {
         cx.emit(MenuEvent::Navigate(item));
     }
 
@@ -362,7 +362,7 @@ impl Menu {
         let closing = self.closing;
         let home = self
             .render_nav_button(NavItem::Home, cx)
-            .on_click(cx.listener(|this, _, _, cx| this.navigate(NavItem::Home, cx)));
+            .on_click(cx.listener(|_, _, _, cx| Self::navigate(NavItem::Home, cx)));
 
         let app_id = self
             .render_nav_button(NavItem::AppId, cx)
@@ -372,10 +372,10 @@ impl Menu {
 
         let about = self
             .render_nav_button(NavItem::About, cx)
-            .on_click(cx.listener(|this, _, _, cx| this.navigate(NavItem::About, cx)));
+            .on_click(cx.listener(|_, _, _, cx| Self::navigate(NavItem::About, cx)));
         let options = self
             .render_nav_button(NavItem::Options, cx)
-            .on_click(cx.listener(|this, _, _, cx| this.navigate(NavItem::Options, cx)));
+            .on_click(cx.listener(|_, _, _, cx| Self::navigate(NavItem::Options, cx)));
 
         div()
             .child(
