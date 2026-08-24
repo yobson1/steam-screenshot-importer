@@ -1,5 +1,6 @@
 use gpui::{
-    App, InteractiveElement as _, IntoElement, ParentElement as _, RenderOnce, Styled as _, div, px,
+    App, InteractiveElement as _, IntoElement, ParentElement as _, RenderOnce, Styled as _, div,
+    img, px,
 };
 use gpui_component::{ActiveTheme as _, link::Link};
 
@@ -70,7 +71,7 @@ impl RenderOnce for AboutPage {
                     .text_sm()
                     .text_color(cx.theme().muted_foreground)
                     .child("by yobson with")
-                    .child(div().text_xl().text_color(gpui::red()).child("♥")),
+                    .child(img("assets/rainbow-heart.svg").size(px(32.0))),
             )
     }
 }

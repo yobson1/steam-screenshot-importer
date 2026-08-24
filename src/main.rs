@@ -4,6 +4,7 @@
 )]
 
 mod app_dirs;
+mod assets;
 mod components;
 mod fallback_artwork;
 mod image_fetch;
@@ -419,7 +420,7 @@ fn main() {
         .init();
 
     gpui_platform::application()
-        .with_assets(gpui_component_assets::Assets)
+        .with_assets(assets::Assets::new())
         .run(|cx: &mut App| {
             gpui_component::init(cx);
             preferences::init(cx);
