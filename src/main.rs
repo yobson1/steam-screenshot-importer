@@ -28,8 +28,9 @@ use gpui::{
     WindowOptions, div, prelude::*, px, size,
 };
 use gpui_component::{
-    ActiveTheme as _, Theme, ThemeRegistry,
+    ActiveTheme as _, Root, Theme, ThemeRegistry,
     scroll::{ScrollableElement as _, ScrollbarMode},
+    spinner::Spinner,
 };
 use image::{Frame, RgbaImage, imageops::FilterType};
 use log::{error, info};
@@ -71,65 +72,6 @@ enum LibraryState {
     Failed(String),
 }
 
-#[cfg(debug_assertions)]
-struct FrameStats {
-    last_frame: Instant,
-    sample_started: Instant,
-    sample_frames: u16,
-    sample_time: Duration,
-    sample_worst: Duration,
-    fps: f32,
-    average_ms: f32,
-    worst_ms: f32,
-}
-
-#[cfg(debug_assertions)]
-impl FrameStats {
-    fn new(now: Instant) -> Self {
-        Self {
-            last_frame: now,
-            sample_started: now,
-            sample_frames: 0,
-            sample_time: Duration::ZERO,
-            sample_worst: Duration::ZERO,
-            fps: 0.0,
-            average_ms: 0.0,
-            worst_ms: 0.0,
-        }
-    }
-
-    fn record_frame(&mut self, now: Instant) {
-        let frame_time = now.saturating_duration_since(self.last_frame);
-        self.last_frame = now;
-
-        // GPUI does not continuously repaint an idle window. Exclude idle gaps so the
-        // diagnostic measures active animation rather than time spent doing no work.
-        if frame_time > Duration::from_millis(100) {
-            self.sample_started = now;
-            self.sample_frames = 0;
-            self.sample_time = Duration::ZERO;
-            self.sample_worst = Duration::ZERO;
-            return;
-        }
-
-        self.sample_frames += 1;
-        self.sample_time += frame_time;
-        self.sample_worst = self.sample_worst.max(frame_time);
-
-        let sample_duration = now.saturating_duration_since(self.sample_started);
-        if sample_duration >= Duration::from_millis(500) {
-            self.fps = f32::from(self.sample_frames) / sample_duration.as_secs_f32();
-            self.average_ms =
-                self.sample_time.as_secs_f32() * 1_000.0 / f32::from(self.sample_frames.max(1));
-            self.worst_ms = self.sample_worst.as_secs_f32() * 1_000.0;
-            self.sample_started = now;
-            self.sample_frames = 0;
-            self.sample_time = Duration::ZERO;
-            self.sample_worst = Duration::ZERO;
-        }
-    }
-}
-
 struct SteamScreenshotImporter {
     cards: Vec<CardState>,
     offscreen: OffscreenRenderer,
@@ -138,8 +80,6 @@ struct SteamScreenshotImporter {
     library_state: LibraryState,
     last_frame: Instant,
     _appearance_subscription: gpui::Subscription,
-    #[cfg(debug_assertions)]
-    frame_stats: FrameStats,
 }
 
 impl SteamScreenshotImporter {
@@ -179,8 +119,6 @@ impl SteamScreenshotImporter {
             library_state: LibraryState::Loading,
             last_frame: now,
             _appearance_subscription: appearance_subscription,
-            #[cfg(debug_assertions)]
-            frame_stats: FrameStats::new(now),
         }
     }
 
@@ -323,22 +261,17 @@ impl SteamScreenshotImporter {
 impl Render for SteamScreenshotImporter {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         self.tick_cards(window);
-        #[cfg(debug_assertions)]
-        {
-            self.frame_stats.record_frame(Instant::now());
-            window.request_animation_frame();
-        }
 
         let cards = (0..self.cards.len())
             .map(|index| self.render_card(index, cx).into_any_element())
             .collect::<Vec<_>>();
+        let is_loading = matches!(self.library_state, LibraryState::Loading);
         let library_message = match &self.library_state {
-            LibraryState::Loading => Some("Fetching games.".to_owned()),
             LibraryState::Ready if self.cards.is_empty() => {
                 Some("No installed Steam games were found.".to_owned())
             }
             LibraryState::Failed(message) => Some(format!("Error: {message}")),
-            LibraryState::Ready => None,
+            LibraryState::Loading | LibraryState::Ready => None,
         };
         let background = cx.theme().background;
         let foreground = cx.theme().foreground;
@@ -379,6 +312,20 @@ impl Render for SteamScreenshotImporter {
                     .flex_wrap()
                     .justify_center()
                     .items_start()
+                    .when(is_loading, |gallery| {
+                        gallery.child(
+                            div()
+                                .w_full()
+                                .flex()
+                                .items_center()
+                                .justify_center()
+                                .gap_2()
+                                .text_sm()
+                                .text_color(muted_foreground)
+                                .child(Spinner::new().color(primary))
+                                .child("Fetching games."),
+                        )
+                    })
                     .when_some(library_message, |gallery, message| {
                         gallery.child(
                             div()
@@ -400,27 +347,9 @@ impl Render for SteamScreenshotImporter {
             .child(page)
             .child(theme_toggle(cx.theme().is_dark()));
 
-        #[cfg(debug_assertions)]
-        let content = content.child(
-            div()
-                .absolute()
-                .top(px(64.0))
-                .right_4()
-                .px_3()
-                .py_2()
-                .rounded_md()
-                .bg(cx.theme().popover.opacity(0.82))
-                .border_1()
-                .border_color(cx.theme().border)
-                .text_xs()
-                .text_color(foreground)
-                .flex()
-                .flex_col()
-                .items_end()
-                .child(format!("{:.1} FPS", self.frame_stats.fps))
-                .child(format!("{:.2} ms avg", self.frame_stats.average_ms))
-                .child(format!("{:.2} ms worst", self.frame_stats.worst_ms)),
-        );
+        #[cfg(feature = "fps")]
+        let content =
+            content.child(gpui_fps::fps_monitor(window, cx).anchor(gpui::Anchor::BottomRight));
 
         content
     }
@@ -549,7 +478,8 @@ fn main() {
                         Theme::sync_system_appearance(Some(window), cx);
                     }
                     Theme::set_scrollbar_mode(ScrollbarMode::Always, cx);
-                    cx.new(|cx| SteamScreenshotImporter::new(window, cx))
+                    let view = cx.new(|cx| SteamScreenshotImporter::new(window, cx));
+                    cx.new(|cx| Root::new(view, window, cx).bg(cx.theme().background))
                 },
             )
             .expect("failed to open Steam Screenshot Importer window");

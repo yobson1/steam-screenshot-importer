@@ -11,6 +11,9 @@ categories = ["multimedia::images"]
 default-run = "steam-screenshot-importer"
 edition = "2024"
 
+[features]
+fps = ["dep:gpui-fps"]
+
 [lints.clippy]
 all = { level = "warn", priority = -1 }
 cargo = { level = "warn", priority = -1 }
@@ -49,6 +52,7 @@ walkdir = "2.5"
 wgpu = "29"
 gpui-component = { git = "https://github.com/longbridge/gpui-component" }
 gpui-component-assets = { git = "https://github.com/longbridge/gpui-component" }
+gpui-fps = { git = "https://github.com/longbridge/gpui-component", optional = true }
 
 [dev-dependencies]
 tempfile = "3"
