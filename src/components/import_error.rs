@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use gpui::{App, InteractiveElement as _, ParentElement as _, Styled as _, Window, div, px};
 use gpui_component::{
-    ActiveTheme as _, StyledExt as _, WindowExt as _,
+    ActiveTheme as _, Icon, IconName, StyledExt as _, WindowExt as _,
     button::{Button, ButtonVariants as _},
     dialog::{Cancel, DialogClose, DialogFooter, DialogTitle},
     notification::NotificationType,
@@ -35,8 +35,26 @@ pub fn present(import_error: ImportError, window: &mut Window, cx: &mut App) {
                 .on_mouse_down_out(|_, window, cx| {
                     window.dispatch_action(Box::new(Cancel), cx);
                 })
-                .child(DialogTitle::new().child(title.clone()))
-                .child(div().text_sm().child(summary.clone()))
+                .child(
+                    div()
+                        .flex()
+                        .items_center()
+                        .gap_2()
+                        .text_color(cx.theme().red)
+                        .child(Icon::new(IconName::CircleX).size(px(24.0)))
+                        .child(DialogTitle::new().child(title.clone())),
+                )
+                .child(
+                    div()
+                        .rounded(cx.theme().radius)
+                        .border_1()
+                        .border_color(cx.theme().red)
+                        .bg(cx.theme().red_light)
+                        .p_3()
+                        .text_sm()
+                        .text_color(cx.theme().foreground)
+                        .child(summary.clone()),
+                )
                 .child(
                     div()
                         .id("import-error-list")
@@ -68,7 +86,7 @@ fn error_item(index: usize, failure: &ImportFailure, cx: &App) -> impl gpui::Int
         .p_3()
         .rounded(cx.theme().radius)
         .border_1()
-        .border_color(cx.theme().border)
+        .border_color(cx.theme().red)
         .child(div().font_semibold().child(file_name))
         .child(
             div()
@@ -76,5 +94,10 @@ fn error_item(index: usize, failure: &ImportFailure, cx: &App) -> impl gpui::Int
                 .text_color(cx.theme().muted_foreground)
                 .child(failure.file_path.display().to_string()),
         )
-        .child(div().text_sm().child(failure.message.clone()))
+        .child(
+            div()
+                .text_sm()
+                .text_color(cx.theme().red)
+                .child(failure.message.clone()),
+        )
 }
