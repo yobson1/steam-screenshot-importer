@@ -1,10 +1,11 @@
 use gpui::{
     AnyElement, App, AppContext as _, Context, Entity, EventEmitter, Focusable as _,
     InteractiveElement as _, IntoElement, MouseButton, ParentElement as _, Render, RenderOnce,
-    Styled as _, Subscription, Window, div, prelude::FluentBuilder as _, px,
+    ScrollHandle, StatefulInteractiveElement as _, Styled as _, Subscription, Window, div,
+    prelude::FluentBuilder as _, px,
 };
 use gpui_component::{
-    ActiveTheme as _, Icon, IconName, Sizable as _,
+    ActiveTheme as _, Icon, IconName, InteractiveElementExt as _, Sizable as _,
     input::{Input, InputEvent, InputState},
     scroll::ScrollableElement as _,
     spinner::Spinner,
@@ -78,6 +79,7 @@ pub struct HomePage {
     cards: Vec<AnyElement>,
     is_loading: bool,
     library_message: Option<String>,
+    scroll_handle: ScrollHandle,
 }
 
 impl HomePage {
@@ -88,6 +90,7 @@ impl HomePage {
         cards: Vec<AnyElement>,
         is_loading: bool,
         library_message: Option<String>,
+        scroll_handle: ScrollHandle,
     ) -> Self {
         Self {
             welcome_text,
@@ -96,24 +99,33 @@ impl HomePage {
             cards,
             is_loading,
             library_message,
+            scroll_handle,
         }
     }
 }
 
 impl RenderOnce for HomePage {
     fn render(self, _window: &mut gpui::Window, cx: &mut App) -> impl IntoElement {
+        let Self {
+            welcome_text,
+            game_search,
+            show_search,
+            cards,
+            is_loading,
+            library_message,
+            scroll_handle,
+        } = self;
         let background = cx.theme().background;
         let foreground = cx.theme().foreground;
         let primary = cx.theme().primary;
         let muted_foreground = cx.theme().muted_foreground;
 
-        div()
-            .id("main-page-scroll")
-            .size_full()
+        let content = div()
+            .w_full()
+            .min_h_full()
+            .flex_none()
             .flex()
             .flex_col()
-            .bg(background)
-            .text_color(foreground)
             .child(
                 div()
                     .flex_none()
@@ -128,10 +140,10 @@ impl RenderOnce for HomePage {
                             .text_size(px(40.0))
                             .font_weight(gpui::FontWeight::THIN)
                             .text_color(primary)
-                            .child(self.welcome_text),
+                            .child(welcome_text),
                     ),
             )
-            .when(self.show_search, |page| {
+            .when(show_search, |page| {
                 page.child(
                     div()
                         .flex_none()
@@ -140,7 +152,7 @@ impl RenderOnce for HomePage {
                         .pb_6()
                         .flex()
                         .justify_center()
-                        .child(self.game_search),
+                        .child(game_search),
                 )
             })
             .child(
@@ -153,7 +165,7 @@ impl RenderOnce for HomePage {
                     .flex_wrap()
                     .justify_center()
                     .items_start()
-                    .when(self.is_loading, |gallery| {
+                    .when(is_loading, |gallery| {
                         gallery.child(
                             div()
                                 .w_full()
@@ -167,7 +179,7 @@ impl RenderOnce for HomePage {
                                 .child("Fetching games."),
                         )
                     })
-                    .when_some(self.library_message, |gallery, message| {
+                    .when_some(library_message, |gallery, message| {
                         gallery.child(
                             div()
                                 .w_full()
@@ -177,8 +189,24 @@ impl RenderOnce for HomePage {
                                 .child(message),
                         )
                     })
-                    .children(self.cards),
+                    .children(cards),
+            );
+
+        div()
+            .id("main-page-scroll")
+            .size_full()
+            .relative()
+            .bg(background)
+            .text_color(foreground)
+            .child(
+                div()
+                    .id("main-page-scroll-area")
+                    .size_full()
+                    .track_scroll(&scroll_handle)
+                    .overflow_y_scroll()
+                    .lock_scroll_axis()
+                    .child(content),
             )
-            .overflow_y_scrollbar()
+            .vertical_scrollbar(&scroll_handle)
     }
 }

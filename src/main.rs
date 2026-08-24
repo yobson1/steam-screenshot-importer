@@ -29,6 +29,7 @@ use components::game_tile::{
     GameTileMotion, GameTileProps, Pointer, game_tile, offscreen_vertices,
     projected_vertices_changed,
 };
+use components::import_error;
 use components::import_progress::ImportProgress;
 use components::menu::{Menu, MenuEvent, NavItem};
 use components::theme_toggle::theme_toggle;
@@ -125,8 +126,10 @@ impl SteamScreenshotImporter {
         .detach();
 
         let now = Instant::now();
+        let router = Router::default();
         let menu = cx.new(|cx| Menu::new(window, cx));
-        let options_page = cx.new(|cx| OptionsPage::new(window, cx));
+        let options_scroll = router.scroll_handle(Route::Options);
+        let options_page = cx.new(|cx| OptionsPage::new(window, options_scroll, cx));
         let game_search = cx.new(|cx| GameSearch::new(window, cx));
         let search_subscription =
             cx.subscribe(&game_search, |_, _, _: &GameSearchEvent, cx| cx.notify());
@@ -180,7 +183,7 @@ impl SteamScreenshotImporter {
             library_state: LibraryState::Loading,
             importing: false,
             game_search,
-            router: Router::default(),
+            router,
             menu,
             options_page,
             last_frame: now,
@@ -303,7 +306,7 @@ impl SteamScreenshotImporter {
                     for failure in &import_error.errors {
                         error!("{}: {}", failure.file_path.display(), failure.message);
                     }
-                    window.push_notification((NotificationType::Error, import_error.summary), cx);
+                    import_error::present(import_error, window, cx);
                 }
             });
         })
@@ -447,6 +450,7 @@ impl SteamScreenshotImporter {
             cards,
             is_loading,
             library_message,
+            self.router.scroll_handle(Route::Home),
         )
     }
 }
@@ -467,7 +471,9 @@ impl Render for SteamScreenshotImporter {
                 self.tick_cards(window);
                 self.render_home_page(cx).into_any_element()
             }
-            Route::About => AboutPage.into_any_element(),
+            Route::About => {
+                AboutPage::new(self.router.scroll_handle(Route::About)).into_any_element()
+            }
             Route::Options => self.options_page.clone().into_any_element(),
         };
 

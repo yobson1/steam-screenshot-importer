@@ -1,24 +1,33 @@
 use gpui::{
-    App, InteractiveElement as _, IntoElement, ParentElement as _, RenderOnce, Styled as _, div,
-    img, px,
+    App, InteractiveElement as _, IntoElement, ParentElement as _, RenderOnce, ScrollHandle,
+    StatefulInteractiveElement as _, Styled as _, div, img, px,
 };
-use gpui_component::{ActiveTheme as _, link::Link};
+use gpui_component::{
+    ActiveTheme as _, InteractiveElementExt as _, link::Link, scroll::ScrollableElement as _,
+};
 
 const ISSUES_URL: &str = "https://github.com/yobson1/steam-screenshot-importer/issues";
 
 #[derive(IntoElement)]
-pub struct AboutPage;
+pub struct AboutPage {
+    scroll_handle: ScrollHandle,
+}
+
+impl AboutPage {
+    pub fn new(scroll_handle: ScrollHandle) -> Self {
+        Self { scroll_handle }
+    }
+}
 
 impl RenderOnce for AboutPage {
     fn render(self, _window: &mut gpui::Window, cx: &mut App) -> impl IntoElement {
-        div()
-            .id("about-page")
-            .size_full()
+        let content = div()
+            .w_full()
+            .min_h_full()
+            .flex_none()
             .flex()
             .flex_col()
             .items_center()
-            .bg(cx.theme().background)
-            .text_color(cx.theme().foreground)
             .px_6()
             .pt_6()
             .pb_4()
@@ -72,6 +81,23 @@ impl RenderOnce for AboutPage {
                     .text_color(cx.theme().muted_foreground)
                     .child("by yobson with")
                     .child(img("assets/rainbow-heart.svg").size(px(32.0))),
+            );
+
+        div()
+            .id("about-page")
+            .size_full()
+            .relative()
+            .bg(cx.theme().background)
+            .text_color(cx.theme().foreground)
+            .child(
+                div()
+                    .id("about-page-scroll-area")
+                    .size_full()
+                    .track_scroll(&self.scroll_handle)
+                    .overflow_y_scroll()
+                    .lock_scroll_axis()
+                    .child(content),
             )
+            .vertical_scrollbar(&self.scroll_handle)
     }
 }

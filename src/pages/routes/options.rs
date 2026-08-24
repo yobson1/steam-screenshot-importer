@@ -1,9 +1,10 @@
 use gpui::{
     App, AppContext as _, Context, Entity, InteractiveElement as _, IntoElement,
-    ParentElement as _, Render, SharedString, Styled as _, Subscription, Window, div, px,
+    ParentElement as _, Render, ScrollHandle, SharedString, StatefulInteractiveElement as _,
+    Styled as _, Subscription, Window, div, px,
 };
 use gpui_component::{
-    ActiveTheme as _, IndexPath, StyledExt as _,
+    ActiveTheme as _, IndexPath, InteractiveElementExt as _, StyledExt as _,
     button::{Button, ButtonVariants as _},
     checkbox::Checkbox,
     group_box::{GroupBox, GroupBoxVariants as _},
@@ -43,11 +44,12 @@ pub struct OptionsPage {
     checking_for_updates: bool,
     quality_slider: Entity<SliderState>,
     filter_select: Entity<SelectState<Vec<FilterOption>>>,
+    scroll_handle: ScrollHandle,
     _subscriptions: Vec<Subscription>,
 }
 
 impl OptionsPage {
-    pub fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
+    pub fn new(window: &mut Window, scroll_handle: ScrollHandle, cx: &mut Context<Self>) -> Self {
         let (jpeg_quality, resize_filter, check_updates_on_startup) = {
             let preferences = cx.global::<Preferences>();
             (
@@ -104,6 +106,7 @@ impl OptionsPage {
             checking_for_updates: false,
             quality_slider,
             filter_select,
+            scroll_handle,
             _subscriptions: subscriptions,
         }
     }
@@ -135,6 +138,29 @@ impl OptionsPage {
             .text_color(cx.theme().muted_foreground)
             .child(text)
     }
+
+    fn scrollable_page(
+        content: impl IntoElement,
+        scroll_handle: &ScrollHandle,
+        cx: &App,
+    ) -> impl IntoElement {
+        div()
+            .id("options-page")
+            .size_full()
+            .relative()
+            .bg(cx.theme().background)
+            .text_color(cx.theme().foreground)
+            .child(
+                div()
+                    .id("options-page-scroll-area")
+                    .size_full()
+                    .track_scroll(scroll_handle)
+                    .overflow_y_scroll()
+                    .lock_scroll_axis()
+                    .child(content),
+            )
+            .vertical_scrollbar(scroll_handle)
+    }
 }
 
 impl Render for OptionsPage {
@@ -142,14 +168,13 @@ impl Render for OptionsPage {
         let quality = self.jpeg_quality;
         let checking = self.checking_for_updates;
 
-        div()
-            .id("options-page")
-            .size_full()
+        let content = div()
+            .w_full()
+            .min_h_full()
+            .flex_none()
             .flex()
             .flex_col()
             .items_center()
-            .bg(cx.theme().background)
-            .text_color(cx.theme().foreground)
             .px_4()
             .pt_6()
             .pb_8()
@@ -237,7 +262,8 @@ impl Render for OptionsPage {
                                     })),
                             ),
                     ),
-            )
-            .overflow_y_scrollbar()
+            );
+
+        Self::scrollable_page(content, &self.scroll_handle, cx)
     }
 }
