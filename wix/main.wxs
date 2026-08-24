@@ -20,13 +20,12 @@
 
     <MajorUpgrade
       Schedule="afterInstallInitialize"
-      AllowSameVersionUpgrades="yes"
       DowngradeErrorMessage="A newer version of Steam Screenshot Importer is already installed." />
     <MediaTemplate EmbedCab="yes" />
 
     <Property Id="ARPNOREPAIR" Value="1" />
-    <Icon Id="ProductIcon" SourceFile="assets\icons\steam-screenshot-importer.ico" />
-    <Property Id="ARPPRODUCTICON" Value="ProductIcon" />
+    <Icon Id="ProductIcon.ico" SourceFile="assets\icons\steam-screenshot-importer.ico" />
+    <Property Id="ARPPRODUCTICON" Value="ProductIcon.ico" />
     <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
 
     <Directory Id="TARGETDIR" Name="SourceDir">
@@ -50,8 +49,8 @@
             Directory="ApplicationProgramsFolder"
             Name="Steam Screenshot Importer"
             Description="Run Steam Screenshot Importer"
-            Advertise="yes"
-            Icon="ProductIcon"
+            Advertise="no"
+            Icon="ProductIcon.ico"
             WorkingDirectory="INSTALLFOLDER" />
         </File>
         <RemoveFolder
