@@ -11,7 +11,6 @@ mod image_fetch;
 mod offscreen;
 mod pages;
 mod preferences;
-mod settings;
 mod steam_locate;
 mod version_checker;
 
@@ -40,6 +39,7 @@ use pages::{
     Route, Router,
     routes::{AboutPage, HomePage, OptionsPage},
 };
+use preferences::{Preference as _, Preferences};
 use rayon::prelude::*;
 use steam_locate::GameArtwork;
 
@@ -134,14 +134,14 @@ impl SteamScreenshotImporter {
             MenuEvent::CustomAppId(app_id) => info!("Selected custom Steam app {app_id}"),
         });
         let appearance_subscription = cx.observe_window_appearance(window, |_, window, cx| {
-            if preferences::selected_theme(cx).is_none() {
+            if cx.global::<Preferences>().theme.get().mode().is_none() {
                 Theme::sync_system_appearance(Some(window), cx);
                 Theme::set_scrollbar_mode(ScrollbarMode::Always, cx);
                 cx.notify();
             }
         });
 
-        if preferences::screenshot_settings(cx).check_updates_on_startup {
+        if cx.global::<Preferences>().check_updates_on_startup.get() {
             let check = cx.background_spawn(async { version_checker::check() });
             cx.spawn_in(window, async move |this, cx| {
                 let result = check.await;
@@ -429,7 +429,7 @@ fn configure_themes(cx: &mut App) {
     let theme = Theme::global_mut(cx);
     theme.light_theme = light;
     theme.dark_theme = dark;
-    if let Some(mode) = preferences::selected_theme(cx) {
+    if let Some(mode) = cx.global::<Preferences>().theme.get().mode() {
         Theme::change(mode, None, cx);
     } else {
         Theme::sync_system_appearance(None, cx);
@@ -460,7 +460,7 @@ fn main() {
                     ..Default::default()
                 },
                 |window, cx| {
-                    if let Some(mode) = preferences::selected_theme(cx) {
+                    if let Some(mode) = cx.global::<Preferences>().theme.get().mode() {
                         Theme::change(mode, Some(window), cx);
                     } else {
                         Theme::sync_system_appearance(Some(window), cx);

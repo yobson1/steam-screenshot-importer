@@ -4,7 +4,7 @@ use gpui_component::{
     button::{Button, ButtonVariants as _},
 };
 
-use crate::preferences;
+use crate::preferences::{Preference as _, Preferences, ThemeSelection};
 
 pub fn theme_toggle(cx: &App) -> impl IntoElement {
     let icon = if cx.theme().is_dark() {
@@ -28,7 +28,9 @@ pub fn theme_toggle(cx: &App) -> impl IntoElement {
                     ThemeMode::Dark
                 };
                 Theme::change(mode, Some(window), cx);
-                preferences::set_selected_theme(cx, mode);
+                cx.global::<Preferences>()
+                    .theme
+                    .set(ThemeSelection::from(mode));
             }),
     )
 }

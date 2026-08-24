@@ -12,7 +12,10 @@ use gpui_component::{
     slider::{Slider, SliderEvent, SliderState},
 };
 
-use crate::{preferences, settings::ResizeFilter, version_checker};
+use crate::{
+    preferences::{Preference as _, Preferences, ResizeFilter},
+    version_checker,
+};
 
 #[derive(Clone)]
 struct FilterOption(ResizeFilter);
@@ -45,13 +48,20 @@ pub struct OptionsPage {
 
 impl OptionsPage {
     pub fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
-        let settings = preferences::screenshot_settings(cx);
+        let (jpeg_quality, resize_filter, check_updates_on_startup) = {
+            let preferences = cx.global::<Preferences>();
+            (
+                preferences.jpeg_quality.get(),
+                preferences.resize_filter.get(),
+                preferences.check_updates_on_startup.get(),
+            )
+        };
         let quality_slider = cx.new(|_| {
             SliderState::new()
                 .min(1.0)
                 .max(100.0)
                 .step(1.0)
-                .default_value(f32::from(settings.jpeg_quality))
+                .default_value(f32::from(jpeg_quality))
         });
 
         let filters = ResizeFilter::ALL
@@ -60,7 +70,7 @@ impl OptionsPage {
             .collect::<Vec<_>>();
         let selected_filter = ResizeFilter::ALL
             .iter()
-            .position(|filter| *filter == settings.resize_filter)
+            .position(|filter| *filter == resize_filter)
             .map(|index| IndexPath::default().row(index));
         let filter_select = cx.new(|cx| SelectState::new(filters, selected_filter, window, cx));
 
@@ -71,7 +81,9 @@ impl OptionsPage {
                 };
                 this.jpeg_quality = slider_quality(value);
                 if matches!(event, SliderEvent::Release(_)) {
-                    preferences::set_jpeg_quality(cx, this.jpeg_quality);
+                    cx.global::<Preferences>()
+                        .jpeg_quality
+                        .set(this.jpeg_quality);
                 }
                 cx.notify();
             }),
@@ -81,14 +93,14 @@ impl OptionsPage {
                     let SelectEvent::Confirm(Some(filter)) = event else {
                         return;
                     };
-                    preferences::set_resize_filter(cx, *filter);
+                    cx.global::<Preferences>().resize_filter.set(*filter);
                 },
             ),
         ];
 
         Self {
-            jpeg_quality: settings.jpeg_quality,
-            check_updates_on_startup: settings.check_updates_on_startup,
+            jpeg_quality,
+            check_updates_on_startup,
             checking_for_updates: false,
             quality_slider,
             filter_select,
@@ -202,7 +214,9 @@ impl Render for OptionsPage {
                                     .label("Check for updates on startup")
                                     .on_click(cx.listener(|this, checked: &bool, _, cx| {
                                         this.check_updates_on_startup = *checked;
-                                        preferences::set_check_updates_on_startup(cx, *checked);
+                                        cx.global::<Preferences>()
+                                            .check_updates_on_startup
+                                            .set(*checked);
                                         cx.notify();
                                     })),
                             )

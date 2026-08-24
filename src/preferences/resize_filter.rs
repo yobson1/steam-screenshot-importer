@@ -1,3 +1,7 @@
+use std::{cell::RefCell, rc::Rc};
+
+use super::preference_store::{Preference, PreferenceStore, get_cached, set_cached};
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ResizeFilter {
     Nearest,
@@ -36,24 +40,47 @@ impl ResizeFilter {
         }
     }
 
-    pub fn from_name(value: &str) -> Option<Self> {
+    fn from_name(value: &str) -> Option<Self> {
         Self::ALL.into_iter().find(|filter| filter.name() == value)
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct ScreenshotSettings {
-    pub jpeg_quality: u8,
-    pub resize_filter: ResizeFilter,
-    pub check_updates_on_startup: bool,
+pub struct ResizeFilterPreference {
+    key: &'static str,
+    value: RefCell<Option<ResizeFilter>>,
+    store: Rc<PreferenceStore>,
 }
 
-impl Default for ScreenshotSettings {
-    fn default() -> Self {
+impl ResizeFilterPreference {
+    pub(super) fn new(store: Rc<PreferenceStore>) -> Self {
         Self {
-            jpeg_quality: 95,
-            resize_filter: ResizeFilter::Lanczos3,
-            check_updates_on_startup: true,
+            key: "filterType",
+            value: RefCell::new(None),
+            store,
         }
+    }
+}
+
+impl Preference for ResizeFilterPreference {
+    type Value = ResizeFilter;
+
+    fn get(&self) -> Self::Value {
+        get_cached(
+            &self.store,
+            self.key,
+            &self.value,
+            self.default(),
+            ResizeFilter::from_name,
+        )
+    }
+
+    fn set(&self, value: Self::Value) {
+        set_cached(&self.store, self.key, &self.value, value, |filter| {
+            filter.name().to_owned()
+        });
+    }
+
+    fn default(&self) -> Self::Value {
+        ResizeFilter::Lanczos3
     }
 }
