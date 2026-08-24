@@ -4,7 +4,7 @@ use gpui_component::{
     WindowExt as _, dialog::DialogButtonProps, notification::NotificationType,
     scroll::ScrollableElement as _, text::TextView,
 };
-use log::error;
+use log::{error, info};
 use semver::Version;
 use serde::Deserialize;
 use std::time::Duration;
@@ -35,6 +35,7 @@ struct GitHubRelease {
 pub fn check() -> anyhow::Result<UpdateStatus> {
     let current = Version::parse(env!("CARGO_PKG_VERSION"))
         .context("application version is not valid semantic versioning")?;
+    info!("Checking for updates from v{current}");
     let response = reqwest::blocking::Client::builder()
         .user_agent(concat!(
             env!("CARGO_PKG_NAME"),
@@ -54,6 +55,7 @@ pub fn check() -> anyhow::Result<UpdateStatus> {
 
     let version_text = response.tag_name.trim_start_matches('v');
     let latest = Version::parse(version_text).context("latest release version is invalid")?;
+    info!("Latest available release is v{latest}");
     if latest <= current {
         return Ok(UpdateStatus::Current);
     }

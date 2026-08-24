@@ -118,11 +118,13 @@ impl OptionsPage {
         let check = cx.background_spawn(async { version_checker::check() });
         cx.spawn_in(window, async move |this, cx| {
             let result = check.await;
-            let _ = this.update_in(cx, |this, window, cx| {
+            if let Err(update_error) = this.update_in(cx, |this, window, cx| {
                 this.checking_for_updates = false;
                 version_checker::present(result, true, window, cx);
                 cx.notify();
-            });
+            }) {
+                log::error!("Failed to present manual update check: {update_error}");
+            }
         })
         .detach();
     }

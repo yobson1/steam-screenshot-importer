@@ -145,9 +145,11 @@ impl SteamScreenshotImporter {
             let check = cx.background_spawn(async { version_checker::check() });
             cx.spawn_in(window, async move |this, cx| {
                 let result = check.await;
-                let _ = this.update_in(cx, |_, window, cx| {
+                if let Err(update_error) = this.update_in(cx, |_, window, cx| {
                     version_checker::present(result, false, window, cx);
-                });
+                }) {
+                    error!("Failed to present startup update check: {update_error}");
+                }
             })
             .detach();
         }
@@ -316,6 +318,9 @@ impl SteamScreenshotImporter {
 
 impl Render for SteamScreenshotImporter {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let sheet_layer = Root::render_sheet_layer(window, cx);
+        let dialog_layer = Root::render_dialog_layer(window, cx);
+        let notification_layer = Root::render_notification_layer(window, cx);
         let background = cx.theme().background;
         let page = match self.router.current() {
             Route::Home => {
@@ -332,7 +337,10 @@ impl Render for SteamScreenshotImporter {
             .bg(background)
             .child(page)
             .child(self.menu.clone())
-            .child(theme_toggle(cx));
+            .child(theme_toggle(cx))
+            .children(sheet_layer)
+            .children(dialog_layer)
+            .children(notification_layer);
 
         #[cfg(feature = "fps")]
         let content =
