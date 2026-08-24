@@ -6,8 +6,8 @@
 [![AUR Release](https://img.shields.io/aur/version/steam-screenshot-importer?logo=arch-linux)](https://aur.archlinux.org/packages/steam-screenshot-importer)
 
 [![GitHub License](https://img.shields.io/github/license/yobson1/steam-screenshot-importer)](/LICENSE)
-[![Tauri Badge](https://img.shields.io/badge/built_with-Tauri-24C8D8?logo=tauri)](https://tauri.app)
-[![Svelte Badge](https://img.shields.io/badge/built_with-Svelte-FF3E00?logo=svelte)](https://svelte.dev)
+[![Rust Badge](https://img.shields.io/badge/built_with-Rust-000000?logo=rust)](https://www.rust-lang.org/)
+[![GPUI Badge](https://img.shields.io/badge/built_with-GPUI-5C6AC4)](https://www.gpui.rs/)
 
 Automatic importing of screenshots into Steam using the Steamworks SDK
 
@@ -15,9 +15,13 @@ Automatic importing of screenshots into Steam using the Steamworks SDK
 
 ## Usage
 
+Steam must be installed and you must be signed into an account that owns the selected game. Start the application, choose a game from your library, then select the images you want to import.
+
 ### Windows
 
-- Download & run the `msi` installer from the latest [release](../../releases)
+- Download the latest Windows `.zip` from the [releases](../../releases) page
+- Extract the ZIP, keeping the executable and DLL files together
+- Run `steam-screenshot-importer.exe`
 
 ### Arch based Linux distros
 
@@ -48,13 +52,21 @@ The same PKGBUILD is also available here in the main repo: [PKGBUILD](/pkg/arch/
 
 ### Other Linux distros
 
-- Download the latest AppImage from the [releases](../../releases) page
-- Make the file executable and run it
+- Download the latest Linux `.tar.gz` from the [releases](../../releases) page
+- Extract the archive and run the application
 
 ```bash
-$ chmod +x steam-screenshot-importer-<version>-x86_64.AppImage
-$ ./steam-screenshot-importer-<version>-x86_64.AppImage
+$ tar -xzf steam-screenshot-importer-<version>-linux-x86_64.tar.gz
+$ ./steam-screenshot-importer-<version>-linux-x86_64/steam-screenshot-importer
 ```
+
+## Features
+
+- Native GPUI interface with light, dark, and system theme modes
+- Automatic discovery and search of installed Steam games
+- Batch image importing with progress and per-file error reporting
+- Configurable JPEG quality and resize filtering
+- Automatic and manual update checks
 
 ## Supported image formats
 
