@@ -43,6 +43,7 @@ reqwest = { version = "0.13", features = ["blocking", "json", "query"] }
 rfd = "0.17"
 rusqlite = { version = "0.40", features = ["bundled"] }
 rust-embed = "8.12"
+semver = "1"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 simple_logger = "5.2"

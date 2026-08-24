@@ -3,6 +3,7 @@ pub enum Route {
     #[default]
     Home,
     About,
+    Options,
 }
 
 #[derive(Debug, Default)]

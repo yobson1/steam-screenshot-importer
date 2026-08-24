@@ -6,8 +6,12 @@ use log::error;
 use rusqlite::{Connection, OptionalExtension as _, params};
 
 use crate::app_dirs::PROJECT_DIRS;
+use crate::settings::{ResizeFilter, ScreenshotSettings};
 
 const SELECTED_THEME_KEY: &str = "selected_theme";
+const JPEG_QUALITY_KEY: &str = "jpegQuality";
+const FILTER_TYPE_KEY: &str = "filterType";
+const CHECK_UPDATES_ON_STARTUP_KEY: &str = "checkUpdatesOnStartup";
 
 pub struct Preferences {
     connection: Option<Connection>,
@@ -64,6 +68,48 @@ impl Preferences {
         )?;
         Ok(())
     }
+
+    fn screenshot_settings(&self) -> ScreenshotSettings {
+        let defaults = ScreenshotSettings::default();
+        ScreenshotSettings {
+            jpeg_quality: self.read_validated(JPEG_QUALITY_KEY, defaults.jpeg_quality, |value| {
+                value.parse().ok().filter(|value| (1..=100).contains(value))
+            }),
+            resize_filter: self.read_validated(
+                FILTER_TYPE_KEY,
+                defaults.resize_filter,
+                ResizeFilter::from_name,
+            ),
+            check_updates_on_startup: self.read_validated(
+                CHECK_UPDATES_ON_STARTUP_KEY,
+                defaults.check_updates_on_startup,
+                |value| match value {
+                    "true" => Some(true),
+                    "false" => Some(false),
+                    _ => None,
+                },
+            ),
+        }
+    }
+
+    fn read_validated<T>(
+        &self,
+        key: &str,
+        default: T,
+        validate: impl FnOnce(&str) -> Option<T>,
+    ) -> T {
+        match self.get(key) {
+            Ok(Some(value)) => validate(&value).unwrap_or_else(|| {
+                error!("Ignoring invalid {key} preference: {value}");
+                default
+            }),
+            Ok(None) => default,
+            Err(read_error) => {
+                error!("Failed to read {key} preference: {read_error:#}");
+                default
+            }
+        }
+    }
 }
 
 pub fn init(cx: &mut App) {
@@ -108,6 +154,32 @@ pub fn set_selected_theme(cx: &App, mode: ThemeMode) {
     }
 }
 
+pub fn screenshot_settings(cx: &App) -> ScreenshotSettings {
+    cx.global::<Preferences>().screenshot_settings()
+}
+
+pub fn set_jpeg_quality(cx: &App, quality: u8) {
+    set(cx, JPEG_QUALITY_KEY, &quality.clamp(1, 100).to_string());
+}
+
+pub fn set_resize_filter(cx: &App, filter: ResizeFilter) {
+    set(cx, FILTER_TYPE_KEY, filter.name());
+}
+
+pub fn set_check_updates_on_startup(cx: &App, enabled: bool) {
+    set(
+        cx,
+        CHECK_UPDATES_ON_STARTUP_KEY,
+        if enabled { "true" } else { "false" },
+    );
+}
+
+fn set(cx: &App, key: &str, value: &str) {
+    if let Err(write_error) = cx.global::<Preferences>().set(key, value) {
+        error!("Failed to save {key} preference: {write_error:#}");
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -129,6 +201,55 @@ mod tests {
                 .expect("preference should be read")
                 .as_deref(),
             Some("dark")
+        );
+    }
+
+    #[test]
+    fn screenshot_settings_are_validated_and_persisted() {
+        let temp = tempfile::tempdir().expect("temporary directory should be created");
+        let path = temp.path().join("preferences.db");
+        let preferences = Preferences::open(&path).expect("preferences should open");
+        preferences
+            .set(JPEG_QUALITY_KEY, "72")
+            .expect("quality should be written");
+        preferences
+            .set(FILTER_TYPE_KEY, "Gaussian")
+            .expect("filter should be written");
+        preferences
+            .set(CHECK_UPDATES_ON_STARTUP_KEY, "false")
+            .expect("update preference should be written");
+        drop(preferences);
+
+        assert_eq!(
+            Preferences::open(&path)
+                .expect("preferences should reopen")
+                .screenshot_settings(),
+            ScreenshotSettings {
+                jpeg_quality: 72,
+                resize_filter: ResizeFilter::Gaussian,
+                check_updates_on_startup: false,
+            }
+        );
+    }
+
+    #[test]
+    fn invalid_screenshot_settings_fall_back_to_defaults() {
+        let temp = tempfile::tempdir().expect("temporary directory should be created");
+        let preferences = Preferences::open(&temp.path().join("preferences.db"))
+            .expect("preferences should open");
+        preferences
+            .set(JPEG_QUALITY_KEY, "101")
+            .expect("quality should be written");
+        preferences
+            .set(FILTER_TYPE_KEY, "Pointy")
+            .expect("filter should be written");
+        preferences
+            .set(CHECK_UPDATES_ON_STARTUP_KEY, "sometimes")
+            .expect("update preference should be written");
+
+        assert_eq!(
+            preferences.screenshot_settings(),
+            ScreenshotSettings::default()
         );
     }
 }

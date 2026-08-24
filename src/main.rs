@@ -11,7 +11,9 @@ mod image_fetch;
 mod offscreen;
 mod pages;
 mod preferences;
+mod settings;
 mod steam_locate;
+mod version_checker;
 
 use std::{
     cell::Cell,
@@ -36,7 +38,7 @@ use log::{error, info};
 use offscreen::{OffscreenRenderer, ProjectedVertex, RenderTag};
 use pages::{
     Route, Router,
-    routes::{AboutPage, HomePage},
+    routes::{AboutPage, HomePage, OptionsPage},
 };
 use rayon::prelude::*;
 use steam_locate::GameArtwork;
@@ -83,6 +85,7 @@ struct SteamScreenshotImporter {
     library_state: LibraryState,
     router: Router,
     menu: gpui::Entity<Menu>,
+    options_page: gpui::Entity<OptionsPage>,
     last_frame: Instant,
     _appearance_subscription: gpui::Subscription,
     _menu_subscription: gpui::Subscription,
@@ -110,6 +113,7 @@ impl SteamScreenshotImporter {
 
         let now = Instant::now();
         let menu = cx.new(|cx| Menu::new(window, cx));
+        let options_page = cx.new(|cx| OptionsPage::new(window, cx));
         let menu_subscription = cx.subscribe(&menu, |this, _, event, cx| match event {
             MenuEvent::Navigate(NavItem::Home) => {
                 if this.router.navigate(Route::Home) {
@@ -121,7 +125,11 @@ impl SteamScreenshotImporter {
                     cx.notify();
                 }
             }
-            MenuEvent::Navigate(NavItem::Options) => info!("Options navigation selected"),
+            MenuEvent::Navigate(NavItem::Options) => {
+                if this.router.navigate(Route::Options) {
+                    cx.notify();
+                }
+            }
             MenuEvent::Navigate(NavItem::AppId) => unreachable!("App ID uses a dialog"),
             MenuEvent::CustomAppId(app_id) => info!("Selected custom Steam app {app_id}"),
         });
@@ -132,6 +140,18 @@ impl SteamScreenshotImporter {
                 cx.notify();
             }
         });
+
+        if preferences::screenshot_settings(cx).check_updates_on_startup {
+            let check = cx.background_spawn(async { version_checker::check() });
+            cx.spawn_in(window, async move |this, cx| {
+                let result = check.await;
+                let _ = this.update_in(cx, |_, window, cx| {
+                    version_checker::present(result, false, window, cx);
+                });
+            })
+            .detach();
+        }
+
         Self {
             cards: Vec::new(),
             offscreen: OffscreenRenderer::new()
@@ -141,6 +161,7 @@ impl SteamScreenshotImporter {
             library_state: LibraryState::Loading,
             router: Router::default(),
             menu,
+            options_page,
             last_frame: now,
             _appearance_subscription: appearance_subscription,
             _menu_subscription: menu_subscription,
@@ -302,6 +323,7 @@ impl Render for SteamScreenshotImporter {
                 self.render_home_page(cx).into_any_element()
             }
             Route::About => AboutPage.into_any_element(),
+            Route::Options => self.options_page.clone().into_any_element(),
         };
 
         let content = div()

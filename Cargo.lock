@@ -6747,6 +6747,7 @@ dependencies = [
  "rfd",
  "rusqlite",
  "rust-embed",
+ "semver",
  "serde",
  "serde_json",
  "simple_logger",
