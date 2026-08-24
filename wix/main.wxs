@@ -46,8 +46,7 @@
             Directory="ApplicationProgramsFolder"
             Name="Steam Screenshot Importer"
             Description="Run Steam Screenshot Importer"
-            Advertise="no"
-            Icon="ProductIcon.ico"
+            Advertise="yes"
             WorkingDirectory="INSTALLFOLDER" />
         </File>
         <RemoveFolder

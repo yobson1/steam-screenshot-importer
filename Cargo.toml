@@ -26,6 +26,7 @@ multiple_crate_versions = "allow"
 serde = { version = "1.0", features = ["derive"] }
 toml = "1"
 ureq = "3"
+winresource = "0.1"
 
 [dependencies]
 anyhow = "1"

@@ -34,12 +34,19 @@ struct Package {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-env-changed=NO_STEAMWORKS");
     println!("cargo:rerun-if-changed=Cargo.lock");
+    println!("cargo:rerun-if-changed=assets/icons/steam-screenshot-importer.ico");
     let target_os = std::env::var("CARGO_CFG_TARGET_OS")?;
 
     if target_os == "linux" {
         println!(
             "cargo:rustc-link-arg-bin=steam-screenshot-importer=-Wl,--enable-new-dtags,-rpath,$ORIGIN:/usr/lib/steam-screenshot-importer"
         );
+    }
+
+    if target_os == "windows" {
+        winresource::WindowsResource::new()
+            .set_icon("assets/icons/steam-screenshot-importer.ico")
+            .compile()?;
     }
 
     if std::env::var_os("NO_STEAMWORKS").is_some() {
