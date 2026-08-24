@@ -7,10 +7,13 @@ mod app_dirs;
 mod assets;
 mod components;
 mod fallback_artwork;
+mod file_picker;
 mod image_fetch;
+mod image_import;
 mod offscreen;
 mod pages;
 mod preferences;
+mod steam;
 mod steam_locate;
 mod version_checker;
 
@@ -25,13 +28,17 @@ use components::game_tile::{
     GameTileMotion, GameTileProps, Pointer, game_tile, offscreen_vertices,
     projected_vertices_changed,
 };
+use components::import_progress::ImportProgress;
 use components::menu::{Menu, MenuEvent, NavItem};
 use components::theme_toggle::theme_toggle;
 use gpui::{
     App, Bounds, Context, Pixels, Render, RenderImage, Window, WindowBounds, WindowOptions, div,
     prelude::*, px, size,
 };
-use gpui_component::{ActiveTheme as _, Root, Theme, ThemeRegistry, scroll::ScrollbarMode};
+use gpui_component::{
+    ActiveTheme as _, Root, Theme, ThemeRegistry, WindowExt as _, notification::NotificationType,
+    scroll::ScrollbarMode,
+};
 use image::{Frame, RgbaImage, imageops::FilterType};
 use log::{error, info};
 use offscreen::{OffscreenRenderer, ProjectedVertex, RenderTag};
@@ -78,11 +85,13 @@ enum LibraryState {
 }
 
 struct SteamScreenshotImporter {
+    window_handle: gpui::AnyWindowHandle,
     cards: Vec<CardState>,
     offscreen: OffscreenRenderer,
     retired_images: Vec<Arc<RenderImage>>,
     steam_user: Option<String>,
     library_state: LibraryState,
+    importing: bool,
     router: Router,
     menu: gpui::Entity<Menu>,
     options_page: gpui::Entity<OptionsPage>,
@@ -131,7 +140,7 @@ impl SteamScreenshotImporter {
                 }
             }
             MenuEvent::Navigate(NavItem::AppId) => unreachable!("App ID uses a dialog"),
-            MenuEvent::CustomAppId(app_id) => info!("Selected custom Steam app {app_id}"),
+            MenuEvent::CustomAppId(app_id) => this.start_import(*app_id, cx),
         });
         let appearance_subscription = cx.observe_window_appearance(window, |_, window, cx| {
             if cx.global::<Preferences>().theme.get().mode().is_none() {
@@ -155,12 +164,14 @@ impl SteamScreenshotImporter {
         }
 
         Self {
+            window_handle: window.window_handle(),
             cards: Vec::new(),
             offscreen: OffscreenRenderer::new()
                 .expect("failed to initialize offscreen WGPU card renderer"),
             retired_images: Vec::new(),
             steam_user: None,
             library_state: LibraryState::Loading,
+            importing: false,
             router: Router::default(),
             menu,
             options_page,
@@ -193,6 +204,100 @@ impl SteamScreenshotImporter {
             .collect();
         self.library_state = LibraryState::Ready;
         info!("Loaded {} games from Steam", self.cards.len());
+    }
+
+    fn start_import(&mut self, app_id: u32, cx: &mut Context<Self>) {
+        let window_handle = self.window_handle;
+        if self.importing {
+            let _ = window_handle.update(cx, |_, window, cx| {
+                window.push_notification("A screenshot import is already in progress.", cx);
+            });
+            return;
+        }
+
+        self.importing = true;
+        let (jpeg_quality, resize_filter) = {
+            let preferences = cx.global::<Preferences>();
+            (
+                preferences.jpeg_quality.get(),
+                preferences.resize_filter.get(),
+            )
+        };
+        cx.spawn(async move |this, cx| {
+            let file_paths = file_picker::pick_screenshot_files().await;
+            if file_paths.is_empty() {
+                if let Err(update_error) = this.update(cx, |this, cx| {
+                    this.importing = false;
+                    cx.notify();
+                }) {
+                    error!("Failed to reset import state: {update_error}");
+                }
+                return;
+            }
+
+            let progress = cx.new(|_| ImportProgress::new());
+            let dialog_progress = progress.clone();
+            if let Err(dialog_error) = window_handle.update(cx, move |_, window, cx| {
+                window.open_dialog(cx, move |dialog, _, _| {
+                    dialog
+                        .title("Importing Screenshots")
+                        .close_button(false)
+                        .keyboard(false)
+                        .overlay_closable(false)
+                        .on_ok(|_, _, _| false)
+                        .on_cancel(|_, _, _| false)
+                        .child(dialog_progress.clone())
+                });
+            }) {
+                error!("Failed to show screenshot import progress: {dialog_error}");
+            }
+
+            let (progress_sender, progress_receiver) = async_channel::unbounded();
+            let progress_updates = cx.spawn(async move |cx| {
+                while let Ok(value) = progress_receiver.recv().await {
+                    progress.update(cx, |progress, cx| progress.set_value(value, cx));
+                }
+            });
+            let import = cx.background_spawn(async move {
+                image_import::import_screenshots(
+                    &file_paths,
+                    app_id,
+                    jpeg_quality,
+                    resize_filter,
+                    move |progress| {
+                        let _ = progress_sender.send_blocking(progress);
+                    },
+                )
+            });
+            let result = import.await;
+            progress_updates.await;
+
+            if let Err(dialog_error) = window_handle.update(cx, |_, window, cx| {
+                window.close_dialog(cx);
+            }) {
+                error!("Failed to close screenshot import progress: {dialog_error}");
+            }
+
+            if let Err(update_error) = this.update(cx, |this, cx| {
+                this.importing = false;
+                cx.notify();
+            }) {
+                error!("Failed to reset import state: {update_error}");
+            }
+
+            let _ = window_handle.update(cx, |_, window, cx| match result {
+                Ok(()) => window
+                    .push_notification((NotificationType::Success, "Screenshots imported."), cx),
+                Err(import_error) => {
+                    error!("Screenshot import failed: {}", import_error.summary);
+                    for failure in &import_error.errors {
+                        error!("{}: {}", failure.file_path.display(), failure.message);
+                    }
+                    window.push_notification((NotificationType::Error, import_error.summary), cx);
+                }
+            });
+        })
+        .detach();
     }
 
     fn tick_cards(&mut self, window: &mut Window) {
@@ -286,8 +391,8 @@ impl SteamScreenshotImporter {
                 this.cards[index].motion.set_pointer(*pointer);
                 cx.notify();
             }),
-            cx.listener(move |_, _, _, _| {
-                info!("Selected Steam app {app_id}");
+            cx.listener(move |this, _, _, cx| {
+                this.start_import(app_id, cx);
             }),
         )
     }

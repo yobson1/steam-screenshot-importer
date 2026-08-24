@@ -6730,6 +6730,7 @@ name = "steam-screenshot-importer"
 version = "0.5.0"
 dependencies = [
  "anyhow",
+ "async-channel",
  "atomic_float",
  "bytemuck",
  "cosmic-text",

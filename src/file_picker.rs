@@ -1,10 +1,10 @@
-#[tauri::command]
-#[specta::specta]
-pub fn pick_screenshot_files() -> Vec<String> {
+use std::path::PathBuf;
+
+pub async fn pick_screenshot_files() -> Vec<PathBuf> {
     let default_dir = directories::UserDirs::new()
         .and_then(|dirs| dirs.picture_dir().map(std::path::Path::to_path_buf));
 
-    let mut dialog = rfd::FileDialog::new()
+    let mut dialog = rfd::AsyncFileDialog::new()
         .set_title("Select screenshots to import")
         .add_filter(
             "Images",
@@ -20,8 +20,9 @@ pub fn pick_screenshot_files() -> Vec<String> {
 
     dialog
         .pick_files()
+        .await
         .unwrap_or_default()
         .into_iter()
-        .map(|p| p.to_string_lossy().to_string())
+        .map(|file| file.path().to_path_buf())
         .collect()
 }

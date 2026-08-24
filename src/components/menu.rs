@@ -5,14 +5,14 @@ use std::{
 
 use gpui::{
     Animation, AnimationExt as _, AnyElement, App, AppContext as _, BoxShadow, ClickEvent, Context,
-    EventEmitter, InteractiveElement as _, IntoElement, ParentElement as _, Pixels, Render,
-    RenderOnce, Size, StatefulInteractiveElement as _, Styled as _, Transformation, Window, div,
-    ease_in_out, hsla, percentage, point, prelude::FluentBuilder as _, px,
+    EventEmitter, Focusable as _, InteractiveElement as _, IntoElement, ParentElement as _, Pixels,
+    Render, RenderOnce, Size, StatefulInteractiveElement as _, Styled as _, Transformation, Window,
+    div, ease_in_out, hsla, percentage, point, prelude::FluentBuilder as _, px,
 };
 use gpui_component::{
     ActiveTheme as _, Icon, IconName, StyledExt as _, WindowExt as _,
     button::{Button, ButtonRounded, ButtonVariants as _},
-    dialog::{Dialog, DialogButtonProps},
+    dialog::{Cancel, DialogAction, DialogClose, DialogFooter, DialogTitle},
     input::{Input, InputState},
 };
 
@@ -274,6 +274,66 @@ impl Menu {
         cx.emit(MenuEvent::Navigate(item));
     }
 
+    fn open_app_id_dialog(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        self.close(cx);
+        self.app_id_input
+            .update(cx, |input, cx| input.set_value("", window, cx));
+
+        let view = cx.entity();
+        let app_id_input = self.app_id_input.clone();
+        let dialog_input = app_id_input.clone();
+        window.open_dialog(cx, move |dialog, _, _| {
+            let app_id_input = app_id_input.clone();
+            let view = view.clone();
+            dialog
+                .width(px(448.0))
+                .overlay_closable(false)
+                .on_ok(move |_, window, cx| {
+                    let value = app_id_input.read(cx).value();
+                    if let Some(app_id) = parse_app_id(&value) {
+                        view.update(cx, |_, cx| cx.emit(MenuEvent::CustomAppId(app_id)));
+                        true
+                    } else {
+                        window.push_notification("Please enter a valid App ID.", cx);
+                        false
+                    }
+                })
+                .child(
+                    div()
+                        .flex()
+                        .flex_col()
+                        .gap_4()
+                        .on_mouse_down_out(|_, window, cx| {
+                            window.dispatch_action(Box::new(Cancel), cx);
+                        })
+                        .child(DialogTitle::new().child("Custom App ID"))
+                        .child(Input::new(&dialog_input).w_full())
+                        .child(
+                            DialogFooter::new()
+                                .gap_2()
+                                .child(
+                                    DialogClose::new().child(
+                                        Button::new("cancel-custom-app-id")
+                                            .label("Cancel")
+                                            .outline(),
+                                    ),
+                                )
+                                .child(
+                                    DialogAction::new().child(
+                                        Button::new("import-custom-app-id")
+                                            .label("Import")
+                                            .primary(),
+                                    ),
+                                ),
+                        ),
+                )
+        });
+        self.app_id_input
+            .read(cx)
+            .focus_handle(cx)
+            .focus(window, cx);
+    }
+
     fn render_nav_button(&self, item: NavItem, cx: &Context<Self>) -> NavButton {
         NavButton::new(
             item,
@@ -305,32 +365,11 @@ impl Menu {
             .render_nav_button(NavItem::Home, cx)
             .on_click(cx.listener(|this, _, _, cx| this.navigate(NavItem::Home, cx)));
 
-        let view = cx.entity();
-        let app_id_input = self.app_id_input.clone();
-        let dialog_input = app_id_input.clone();
-        let app_id = Dialog::new(cx)
-            .trigger(self.render_nav_button(NavItem::AppId, cx))
-            .title("Custom App ID")
-            .button_props(
-                DialogButtonProps::default()
-                    .ok_text("Import")
-                    .cancel_text("Cancel")
-                    .show_cancel(true),
-            )
-            .on_ok(move |_, window, cx| {
-                let value = app_id_input.read(cx).value();
-                if let Some(app_id) = parse_app_id(&value) {
-                    view.update(cx, |this, cx| {
-                        this.close(cx);
-                        cx.emit(MenuEvent::CustomAppId(app_id));
-                    });
-                    true
-                } else {
-                    window.push_notification("Please enter a valid App ID.", cx);
-                    false
-                }
-            })
-            .child(Input::new(&dialog_input).w_full());
+        let app_id = self
+            .render_nav_button(NavItem::AppId, cx)
+            .on_click(cx.listener(|this, _, window, cx| {
+                this.open_app_id_dialog(window, cx);
+            }));
 
         let about = self
             .render_nav_button(NavItem::About, cx)

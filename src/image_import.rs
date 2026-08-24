@@ -1,5 +1,5 @@
-use crate::AppRuntime;
 use crate::app_dirs::PROJECT_DIRS;
+use crate::preferences::ResizeFilter;
 use crate::steam::{initialize_steam, open_steam_section};
 use atomic_float::AtomicF32;
 use image::codecs::jpeg::JpegEncoder;
@@ -7,39 +7,28 @@ use image::imageops::{FilterType as ImageFilterType, resize};
 use image::{DynamicImage, ImageReader};
 use log::{error, info, warn};
 use rayon::prelude::*;
-use serde::{Deserialize, Serialize};
 use std::ffi::CString;
-use std::fs::{File, copy, create_dir, create_dir_all, remove_dir_all};
+use std::fmt;
+use std::fs::{File, copy, create_dir_all, remove_dir_all};
 use std::io::BufWriter;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, atomic::Ordering};
 use steamworks::sys::INVALID_SCREENSHOT_HANDLE;
 use steamworks::sys::SteamAPI_ISteamScreenshots_AddScreenshotToLibrary as add_screenshot_to_library;
 use steamworks::sys::SteamAPI_SteamScreenshots_v003 as get_steam_screenshots;
-use tauri::Emitter;
 
-const PROGRESS_EVENT: &str = "screenshotImportProgress";
 const THUMB_WIDTH: u32 = steamworks::sys::k_ScreenshotThumbWidth as u32;
 const MAX_SIDE: u32 = 16_000;
 const MAX_RESOLUTION: u32 = 26_210_175;
 
-#[derive(Clone, Copy, Deserialize, specta::Type)]
-pub enum ResizeFilterType {
-    Nearest,
-    Triangle,
-    CatmullRom,
-    Gaussian,
-    Lanczos3,
-}
-
-impl From<ResizeFilterType> for ImageFilterType {
-    fn from(filter_type: ResizeFilterType) -> Self {
+impl From<ResizeFilter> for ImageFilterType {
+    fn from(filter_type: ResizeFilter) -> Self {
         match filter_type {
-            ResizeFilterType::Nearest => Self::Nearest,
-            ResizeFilterType::Triangle => Self::Triangle,
-            ResizeFilterType::CatmullRom => Self::CatmullRom,
-            ResizeFilterType::Gaussian => Self::Gaussian,
-            ResizeFilterType::Lanczos3 => Self::Lanczos3,
+            ResizeFilter::Nearest => Self::Nearest,
+            ResizeFilter::Triangle => Self::Triangle,
+            ResizeFilter::CatmullRom => Self::CatmullRom,
+            ResizeFilter::Gaussian => Self::Gaussian,
+            ResizeFilter::Lanczos3 => Self::Lanczos3,
         }
     }
 }
@@ -51,18 +40,16 @@ struct ImportOptions {
     filter_type: ImageFilterType,
 }
 
-#[derive(Serialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug)]
 pub struct ImportError {
-    summary: String,
-    errors: Vec<ImportFailure>,
+    pub summary: String,
+    pub errors: Vec<ImportFailure>,
 }
 
-#[derive(Serialize, specta::Type)]
-#[serde(rename_all = "camelCase")]
-struct ImportFailure {
-    file_path: String,
-    message: String,
+#[derive(Debug)]
+pub struct ImportFailure {
+    pub file_path: PathBuf,
+    pub message: String,
 }
 
 impl ImportError {
@@ -87,22 +74,28 @@ impl From<String> for ImportError {
     }
 }
 
+impl fmt::Display for ImportError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(&self.summary)
+    }
+}
+
+impl std::error::Error for ImportError {}
+
 struct ImportContext {
-    window: tauri::Window<AppRuntime>,
     cache_dir: PathBuf,
     client: Mutex<steamworks::Client>,
     screenshots_completed: AtomicF32,
     total_screenshots: usize,
+    report_progress: Arc<dyn Fn(f32) + Send + Sync>,
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn import_screenshots(
-    file_paths: Vec<String>,
+pub fn import_screenshots(
+    file_paths: &[PathBuf],
     app_id: u32,
     jpeg_quality: u8,
-    filter_type: ResizeFilterType,
-    window: tauri::Window<AppRuntime>,
+    filter_type: ResizeFilter,
+    report_progress: impl Fn(f32) + Send + Sync + 'static,
 ) -> Result<(), ImportError> {
     info!(
         "Importing {} screenshots under AppID {}",
@@ -124,13 +117,16 @@ pub async fn import_screenshots(
 
     // Check if steam is running and initialize client
     let client = initialize_steam(app_id)?;
+    let cache_dir = PROJECT_DIRS.cache_dir().to_path_buf();
+    create_dir_all(&cache_dir)
+        .map_err(|error| format!("Failed to create screenshot cache: {error}"))?;
 
     let ctx = Arc::new(ImportContext {
-        window,
-        cache_dir: PROJECT_DIRS.cache_dir().to_path_buf(),
+        cache_dir,
         client: Mutex::new(client),
         screenshots_completed: AtomicF32::new(0.0),
         total_screenshots: num_of_files,
+        report_progress: Arc::new(report_progress),
     });
 
     // Process screenshots in parallel
@@ -144,6 +140,11 @@ pub async fn import_screenshots(
 
     info!("Emptying cache");
     let cleanup_result = remove_dir_all(&ctx.cache_dir)
+        .or_else(|error| {
+            (error.kind() == std::io::ErrorKind::NotFound)
+                .then_some(())
+                .ok_or(error)
+        })
         .and_then(|()| create_dir_all(&ctx.cache_dir))
         .map_err(|error| format!("Failed to empty screenshot cache: {error}"));
 
@@ -169,7 +170,8 @@ pub async fn import_screenshots(
         for import_error in &import_errors {
             error!(
                 "Failed to import {}: {}",
-                import_error.file_path, import_error.message
+                import_error.file_path.display(),
+                import_error.message
             );
         }
 
@@ -183,7 +185,7 @@ pub async fn import_screenshots(
 }
 
 fn import_single_screenshot(
-    file_path: &str,
+    file_path: &Path,
     file_index: usize,
     ctx: &ImportContext,
     options: ImportOptions,
@@ -193,36 +195,30 @@ fn import_single_screenshot(
         process_single_screenshot(file_path, file_index, ctx, options, &mut progress_remaining);
 
     if result.is_err() && progress_remaining > 0.0 {
-        update_progress(
-            &ctx.window,
-            &ctx.screenshots_completed,
-            ctx.total_screenshots,
-            progress_remaining,
-        );
+        update_progress(ctx, progress_remaining);
     }
 
     result.map_err(|message| ImportFailure {
-        file_path: file_path.to_string(),
+        file_path: file_path.to_path_buf(),
         message,
     })
 }
 
 fn process_single_screenshot(
-    file_path: &str,
+    img_path: &Path,
     file_index: usize,
     ctx: &ImportContext,
     options: ImportOptions,
     progress_remaining: &mut f32,
 ) -> Result<(), String> {
-    let img_path = Path::new(file_path);
     let img_name = img_path
         .file_stem()
         .and_then(|name| name.to_str())
-        .ok_or_else(|| format!("Invalid screenshot path: {file_path}"))?;
+        .ok_or_else(|| format!("Invalid screenshot path: {}", img_path.display()))?;
     let extension = img_path
         .extension()
         .and_then(|extension| extension.to_str())
-        .ok_or_else(|| format!("Screenshot has no valid extension: {file_path}"))?;
+        .ok_or_else(|| format!("Screenshot has no valid extension: {}", img_path.display()))?;
 
     let new_file_name = format!("{}_{}.jpg", img_name, options.app_id);
     let new_thumbnail_name = format!("{}_{}_thumb.jpg", img_name, options.app_id);
@@ -231,14 +227,14 @@ fn process_single_screenshot(
 
     // Load original image
     info!("Loading image: {}", img_path.display());
-    let img = ImageReader::open(file_path)
+    let img = ImageReader::open(img_path)
         .map_err(|error| format!("Failed to open {img_name}.{extension}: {error}"))?
         .decode()
         .map_err(|error| format!("Failed to decode {img_name}.{extension}: {error}"))?;
 
     // Convert to jpg or downscale if needed
     let file_cache_dir = ctx.cache_dir.join(file_index.to_string());
-    create_dir(&file_cache_dir)
+    create_dir_all(&file_cache_dir)
         .map_err(|error| format!("Failed to create screenshot cache: {error}"))?;
     let new_img_path = file_cache_dir.join(&new_file_name);
 
@@ -334,6 +330,20 @@ fn process_single_screenshot(
     Ok(())
 }
 
+fn report_step_progress(ctx: &ImportContext, progress_remaining: &mut f32, step_progress: f32) {
+    update_progress(ctx, step_progress);
+    *progress_remaining = (*progress_remaining - step_progress).max(0.0);
+}
+
+fn update_progress(ctx: &ImportContext, step_progress: f32) {
+    let completed = ctx
+        .screenshots_completed
+        .fetch_add(step_progress, Ordering::SeqCst);
+    #[allow(clippy::cast_precision_loss)]
+    let progress = ((completed + step_progress) / ctx.total_screenshots as f32) * 100.0;
+    (ctx.report_progress)(progress.clamp(0.0, 100.0));
+}
+
 fn resize_for_steam(
     img: DynamicImage,
     img_name: &str,
@@ -388,26 +398,43 @@ fn downscaled_dimensions(width: u32, height: u32) -> (u32, u32) {
     }
 }
 
-fn report_step_progress(ctx: &ImportContext, progress_remaining: &mut f32, step_progress: f32) {
-    update_progress(
-        &ctx.window,
-        &ctx.screenshots_completed,
-        ctx.total_screenshots,
-        step_progress,
-    );
-    *progress_remaining = (*progress_remaining - step_progress).max(0.0);
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-fn update_progress(
-    window: &tauri::Window<AppRuntime>,
-    screenshots_completed: &AtomicF32,
-    total_screenshots: usize,
-    step_progress: f32,
-) {
-    let completed = screenshots_completed.fetch_add(step_progress, Ordering::SeqCst);
-    #[allow(clippy::cast_precision_loss)]
-    let progress = ((completed + step_progress) / total_screenshots as f32) * 100.0;
-    if let Err(error) = window.emit(PROGRESS_EVENT, progress) {
-        error!("Failed to emit screenshot import progress: {error}");
+    #[test]
+    fn downscaled_images_fit_steam_limits() {
+        for (width, height) in [
+            (20_000, 100),
+            (100, 20_000),
+            (20_000, 20_000),
+            (80_000, 10_000),
+        ] {
+            let (scaled_width, scaled_height) = downscaled_dimensions(width, height);
+            assert!(scaled_width <= MAX_SIDE);
+            assert!(scaled_height <= MAX_SIDE);
+            assert!(
+                u64::from(scaled_width) * u64::from(scaled_height) <= u64::from(MAX_RESOLUTION)
+            );
+            assert!(scaled_width > 0);
+            assert!(scaled_height > 0);
+        }
+    }
+
+    #[test]
+    fn import_error_summary_distinguishes_partial_and_total_failure() {
+        let failure = || ImportFailure {
+            file_path: PathBuf::from("screenshot.png"),
+            message: "failed".to_owned(),
+        };
+
+        assert_eq!(
+            ImportError::from_failures(2, vec![failure()]).summary,
+            "1 of 2 screenshots failed to import."
+        );
+        assert_eq!(
+            ImportError::from_failures(1, vec![failure()]).summary,
+            "All 1 screenshots failed to import."
+        );
     }
 }
