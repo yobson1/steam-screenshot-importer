@@ -101,6 +101,7 @@ jobs:
           }
 
           New-Item -ItemType Directory -Force $stage | Out-Null
+          $stage = (Resolve-Path $stage).Path
           Copy-Item "target\release\${{ github.event.repository.name }}.exe" $stage
           Copy-Item $steamApi.FullName $stage
           Copy-Item "C:\vcpkg\installed\x64-windows\bin\dav1d.dll" $stage
@@ -114,6 +115,18 @@ jobs:
         shell: pwsh
         run: |
           $output = (Resolve-Path "dist").Path
+          $requiredFiles = @(
+            "steam-screenshot-importer.exe",
+            "steam_api64.dll",
+            "dav1d.dll"
+          )
+          $missingFiles = $requiredFiles | Where-Object {
+            -not (Test-Path (Join-Path $env:WINDOWS_STAGE $_) -PathType Leaf)
+          }
+
+          if ($missingFiles) {
+            throw "MSI staging directory '$env:WINDOWS_STAGE' is missing: $($missingFiles -join ', ')"
+          }
 
           dotnet build "wix\installer.wixproj" `
             --configuration Release `
