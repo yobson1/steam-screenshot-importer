@@ -1,5 +1,3 @@
-pub mod check_updates_on_startup;
-pub mod jpeg_quality;
 mod preference_store;
 pub mod resize_filter;
 pub mod theme;
@@ -9,7 +7,7 @@ use log::error;
 
 use crate::app_dirs::PROJECT_DIRS;
 
-pub use preference_store::{Preference, Preferences};
+pub use preference_store::Preferences;
 pub use resize_filter::ResizeFilter;
 pub use theme::ThemeSelection;
 

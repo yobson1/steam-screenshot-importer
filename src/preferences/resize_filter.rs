@@ -1,6 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
-
-use super::preference_store::{Preference, PreferenceStore, get_cached, set_cached};
+use std::{fmt, str::FromStr};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ResizeFilter {
@@ -39,48 +37,21 @@ impl ResizeFilter {
             Self::Lanczos3 => "Lanczos3: best quality, slowest",
         }
     }
+}
 
-    fn from_name(value: &str) -> Option<Self> {
-        Self::ALL.into_iter().find(|filter| filter.name() == value)
+impl fmt::Display for ResizeFilter {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(self.name())
     }
 }
 
-pub struct ResizeFilterPreference {
-    key: &'static str,
-    value: RefCell<Option<ResizeFilter>>,
-    store: Rc<PreferenceStore>,
-}
+impl FromStr for ResizeFilter {
+    type Err = ();
 
-impl ResizeFilterPreference {
-    pub(super) fn new(store: Rc<PreferenceStore>) -> Self {
-        Self {
-            key: "filterType",
-            value: RefCell::new(None),
-            store,
-        }
-    }
-}
-
-impl Preference for ResizeFilterPreference {
-    type Value = ResizeFilter;
-
-    fn get(&self) -> Self::Value {
-        get_cached(
-            &self.store,
-            self.key,
-            &self.value,
-            self.default(),
-            ResizeFilter::from_name,
-        )
-    }
-
-    fn set(&self, value: Self::Value) {
-        set_cached(&self.store, self.key, &self.value, value, |filter| {
-            filter.name().to_owned()
-        });
-    }
-
-    fn default(&self) -> Self::Value {
-        ResizeFilter::Lanczos3
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        Self::ALL
+            .into_iter()
+            .find(|filter| filter.name() == value)
+            .ok_or(())
     }
 }

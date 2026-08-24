@@ -13,7 +13,7 @@ use gpui_component::{
 };
 
 use crate::{
-    preferences::{Preference as _, Preferences, ResizeFilter},
+    preferences::{Preferences, ResizeFilter},
     version_checker,
 };
 

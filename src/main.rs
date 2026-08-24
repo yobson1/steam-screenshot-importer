@@ -46,7 +46,7 @@ use pages::{
     Route, Router,
     routes::{AboutPage, GameSearch, GameSearchEvent, HomePage, OptionsPage},
 };
-use preferences::{Preference as _, Preferences};
+use preferences::Preferences;
 use rayon::prelude::*;
 use steam_locate::GameArtwork;
 
