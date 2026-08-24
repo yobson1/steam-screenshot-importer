@@ -24,6 +24,35 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Stage WiX validation inputs
+        shell: pwsh
+        run: |
+          $stage = Join-Path $env:RUNNER_TEMP "wix-validation-stage"
+          $output = Join-Path $env:RUNNER_TEMP "wix-validation-output"
+
+          New-Item -ItemType Directory -Force $stage, $output | Out-Null
+          Copy-Item "$env:SystemRoot\System32\notepad.exe" "$stage\steam-screenshot-importer.exe"
+          Copy-Item "$env:SystemRoot\System32\version.dll" "$stage\steam_api64.dll"
+          Copy-Item "$env:SystemRoot\System32\version.dll" "$stage\dav1d.dll"
+
+          "WIX_VALIDATION_STAGE=$stage" >> $env:GITHUB_ENV
+          "WIX_VALIDATION_OUTPUT=$output" >> $env:GITHUB_ENV
+
+      - name: Validate WiX installer
+        shell: pwsh
+        run: |
+          dotnet build "wix\installer.wixproj" `
+            --configuration Release `
+            "-p:SourceDir=$env:WIX_VALIDATION_STAGE" `
+            "-p:ProductVersion=1.0.0" `
+            "-p:OutputPath=$env:WIX_VALIDATION_OUTPUT\" `
+            "-p:OutputName=installer"
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
@@ -84,19 +113,15 @@ jobs:
       - name: Create Windows MSI
         shell: pwsh
         run: |
-          candle.exe `
-            -nologo `
-            -arch x64 `
-            "-dSourceDir=$env:WINDOWS_STAGE" `
-            "-dProductVersion=$env:MSI_VERSION" `
-            -out "dist\installer.wixobj" `
-            "wix\main.wxs"
+          $output = (Resolve-Path "dist").Path
 
-          light.exe `
-            -nologo `
-            -ext WixUIExtension `
-            -out "dist\$env:WINDOWS_ARCHIVE_NAME.msi" `
-            "dist\installer.wixobj"
+          dotnet build "wix\installer.wixproj" `
+            --configuration Release `
+            --no-restore `
+            "-p:SourceDir=$env:WINDOWS_STAGE" `
+            "-p:ProductVersion=$env:MSI_VERSION" `
+            "-p:OutputPath=$output\" `
+            "-p:OutputName=$env:WINDOWS_ARCHIVE_NAME"
 
       - name: Upload Windows release artifacts
         uses: actions/upload-artifact@v7

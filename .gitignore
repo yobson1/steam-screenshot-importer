@@ -2,6 +2,10 @@
 /target/
 WixTools
 
+# WiX build output
+/wix/bin/
+/wix/obj/
+
 # Steamworks redistributables
 /steam_api/
 libsteam_api.so

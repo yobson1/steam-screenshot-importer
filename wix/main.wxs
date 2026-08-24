@@ -1,44 +1,41 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-  <Product
-    Id="*"
+<Wix
+  xmlns="http://wixtoolset.org/schemas/v4/wxs"
+  xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+  RequiredVersion="7.0.0">
+  <Package
     Name="Steam Screenshot Importer"
     Language="1033"
     Version="$(var.ProductVersion)"
     Manufacturer="yobson"
-    UpgradeCode="BD283E5C-4DEE-583A-A582-81D17C742E43">
+    UpgradeCode="BD283E5C-4DEE-583A-A582-81D17C742E43"
+    InstallerVersion="500"
+    Scope="perMachine"
+    Compressed="yes">
     <!--
       UpgradeCode is Tauri's UUID v5 for
       "Steam Screenshot Importer.exe.app.x64". Keeping it allows this package
       to replace MSI installations produced by the former Tauri build.
     -->
-    <Package
-      InstallerVersion="500"
-      Compressed="yes"
-      InstallScope="perMachine"
-      Platform="x64" />
-
     <MajorUpgrade
       Schedule="afterInstallInitialize"
       DowngradeErrorMessage="A newer version of Steam Screenshot Importer is already installed." />
     <MediaTemplate EmbedCab="yes" />
 
     <Property Id="ARPNOREPAIR" Value="1" />
-    <Icon Id="ProductIcon.ico" SourceFile="assets\icons\steam-screenshot-importer.ico" />
+    <Icon
+      Id="ProductIcon.ico"
+      SourceFile="$(sys.SOURCEFILEDIR)..\assets\icons\steam-screenshot-importer.ico" />
     <Property Id="ARPPRODUCTICON" Value="ProductIcon.ico" />
-    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
 
-    <Directory Id="TARGETDIR" Name="SourceDir">
-      <Directory Id="ProgramFiles64Folder">
-        <Directory Id="INSTALLFOLDER" Name="Steam Screenshot Importer" />
-      </Directory>
-      <Directory Id="ProgramMenuFolder">
-        <Directory Id="ApplicationProgramsFolder" Name="Steam Screenshot Importer" />
-      </Directory>
-    </Directory>
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="Steam Screenshot Importer" />
+    </StandardDirectory>
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ApplicationProgramsFolder" Name="Steam Screenshot Importer" />
+    </StandardDirectory>
 
     <DirectoryRef Id="INSTALLFOLDER">
-      <Component Id="ApplicationExecutable" Guid="*" Win64="yes">
+      <Component Id="ApplicationExecutable" Bitness="always64">
         <File
           Id="ApplicationExecutableFile"
           Source="$(var.SourceDir)\steam-screenshot-importer.exe"
@@ -59,7 +56,7 @@
           On="uninstall" />
       </Component>
 
-      <Component Id="SteamworksRuntime" Guid="*" Win64="yes">
+      <Component Id="SteamworksRuntime" Bitness="always64">
         <File
           Id="SteamworksRuntimeFile"
           Source="$(var.SourceDir)\steam_api64.dll"
@@ -67,7 +64,7 @@
           Checksum="yes" />
       </Component>
 
-      <Component Id="Dav1dRuntime" Guid="*" Win64="yes">
+      <Component Id="Dav1dRuntime" Bitness="always64">
         <File
           Id="Dav1dRuntimeFile"
           Source="$(var.SourceDir)\dav1d.dll"
@@ -84,9 +81,9 @@
 
     <UI>
       <!-- There is no license dialog until installer artwork/legal copy is added. -->
-      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="2">1</Publish>
-      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="2">1</Publish>
+      <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="2" />
+      <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="2" />
     </UI>
-    <UIRef Id="WixUI_InstallDir" />
-  </Product>
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+  </Package>
 </Wix>
