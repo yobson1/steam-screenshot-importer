@@ -60,12 +60,12 @@ impl NavItem {
         }
     }
 
-    pub const fn icon(self) -> IconName {
+    pub fn icon(self) -> Icon {
         match self {
-            Self::Home => IconName::LayoutDashboard,
-            Self::AppId => IconName::Plus,
-            Self::About => IconName::Info,
-            Self::Options => IconName::Settings,
+            Self::Home => Icon::empty().path("assets/house.svg"),
+            Self::AppId => Icon::new(IconName::Plus),
+            Self::About => Icon::new(IconName::Info),
+            Self::Options => Icon::new(IconName::Settings),
         }
     }
 
@@ -166,7 +166,7 @@ impl NavButton {
     }
 
     fn render_icon(&self) -> AnyElement {
-        let icon = Icon::new(self.item.icon()).size(px(25.0));
+        let icon = self.item.icon().size(px(25.0));
         if self.item.spins() && self.rotation > 0.0 {
             icon.transform(Transformation::rotate(percentage(self.rotation)))
                 .into_any_element()
