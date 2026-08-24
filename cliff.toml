@@ -60,9 +60,8 @@ body = """
     ## Installation
 
     ### Windows
-    - Download `{{ remote.github.repo }}-{{ version | trim_start_matches(pat="v") }}-windows-x86_64.zip`
-    - Extract the ZIP, keeping the executable and DLL files together
-    - Run `{{ remote.github.repo }}.exe`
+    - Download and run `{{ remote.github.repo }}-{{ version | trim_start_matches(pat="v") }}-windows-x86_64.msi`
+    - Alternatively, download the portable `{{ remote.github.repo }}-{{ version | trim_start_matches(pat="v") }}-windows-x86_64.zip`, extract it while keeping the executable and DLL files together, then run `{{ remote.github.repo }}.exe`
 
     ### Arch Based Linux Distros
     - Download `{{ remote.github.repo }}-{{ version | trim_start_matches(pat="v") }}-1-x86_64.pkg.tar.zst`

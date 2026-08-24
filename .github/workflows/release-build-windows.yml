@@ -46,15 +46,25 @@ jobs:
           PKG_CONFIG_PATH: C:\vcpkg\installed\x64-windows\lib\pkgconfig
         run: cargo build --release --locked
 
-      - name: Create Windows ZIP
+      - name: Stage Windows distribution
         shell: pwsh
         env:
           REQUESTED_VERSION: ${{ inputs.version }}
         run: |
           $version = $env:REQUESTED_VERSION -replace '^v', ''
+          if (-not $version) {
+            $metadata = cargo metadata --no-deps --format-version 1 | ConvertFrom-Json
+            $version = ($metadata.packages | Where-Object name -eq '${{ github.event.repository.name }}').version
+          }
+
+          $msiVersion = ($version -split '[-+]')[0]
+          if ($msiVersion -notmatch '^\d+\.\d+\.\d+$') {
+            throw "Version '$version' cannot be converted to a three-part MSI version"
+          }
+
           $archiveName = "${{ github.event.repository.name }}-windows-x86_64"
 
-          if ($version) {
+          if ($env:REQUESTED_VERSION) {
             $archiveName = "${{ github.event.repository.name }}-$version-windows-x86_64"
           }
 
@@ -71,9 +81,32 @@ jobs:
           Copy-Item "C:\vcpkg\installed\x64-windows\bin\dav1d.dll" $stage
           Compress-Archive -Path "$stage\*" -DestinationPath "dist\${archiveName}.zip"
 
-      - name: Upload Windows ZIP
+          "WINDOWS_ARCHIVE_NAME=$archiveName" >> $env:GITHUB_ENV
+          "WINDOWS_STAGE=$stage" >> $env:GITHUB_ENV
+          "MSI_VERSION=$msiVersion" >> $env:GITHUB_ENV
+
+      - name: Create Windows MSI
+        shell: pwsh
+        run: |
+          candle.exe `
+            -nologo `
+            -arch x64 `
+            "-dSourceDir=$env:WINDOWS_STAGE" `
+            "-dProductVersion=$env:MSI_VERSION" `
+            -out "dist\installer.wixobj" `
+            "wix\main.wxs"
+
+          light.exe `
+            -nologo `
+            -ext WixUIExtension `
+            -out "dist\$env:WINDOWS_ARCHIVE_NAME.msi" `
+            "dist\installer.wixobj"
+
+      - name: Upload Windows release artifacts
         uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.artifact-name }}
-          path: dist/*.zip
+          path: |
+            dist/*.msi
+            dist/*.zip
           if-no-files-found: error

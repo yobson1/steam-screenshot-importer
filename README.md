@@ -19,9 +19,8 @@ Steam must be installed and you must be signed into an account that owns the sel
 
 ### Windows
 
-- Download the latest Windows `.zip` from the [releases](../../releases) page
-- Extract the ZIP, keeping the executable and DLL files together
-- Run `steam-screenshot-importer.exe`
+- Download the latest Windows `.msi` from the [releases](../../releases) page and run it
+- A portable `.zip` is also available; extract it, keep the executable and DLL files together, then run `steam-screenshot-importer.exe`
 
 ### Arch based Linux distros
 
