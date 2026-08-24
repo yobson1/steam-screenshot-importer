@@ -1,0 +1,79 @@
+name: Release Build (Windows)
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Release version, with or without a leading v
+        required: false
+        type: string
+      artifact-name:
+        description: Name of the uploaded workflow artifact
+        default: windows
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: . -> target
+
+      - name: Install Windows build dependencies
+        uses: crazy-max/ghaction-chocolatey@v4
+        with:
+          args: install pkgconfiglite
+
+      - name: Install dav1d
+        shell: pwsh
+        run: vcpkg install dav1d:x64-windows
+
+      - name: Build Windows executable
+        env:
+          PKG_CONFIG_PATH: C:\vcpkg\installed\x64-windows\lib\pkgconfig
+        run: cargo build --release --locked
+
+      - name: Create Windows ZIP
+        shell: pwsh
+        env:
+          REQUESTED_VERSION: ${{ inputs.version }}
+        run: |
+          $version = $env:REQUESTED_VERSION -replace '^v', ''
+          $archiveName = "${{ github.event.repository.name }}-windows-x86_64"
+
+          if ($version) {
+            $archiveName = "${{ github.event.repository.name }}-$version-windows-x86_64"
+          }
+
+          $stage = Join-Path dist $archiveName
+          $steamApi = Get-ChildItem steam_api -Recurse -Filter steam_api64.dll | Select-Object -First 1
+
+          if (-not $steamApi) {
+            throw "steam_api64.dll was not downloaded by build.rs"
+          }
+
+          New-Item -ItemType Directory -Force $stage | Out-Null
+          Copy-Item "target\release\${{ github.event.repository.name }}.exe" $stage
+          Copy-Item $steamApi.FullName $stage
+          Copy-Item "C:\vcpkg\installed\x64-windows\bin\dav1d.dll" $stage
+          Compress-Archive -Path "$stage\*" -DestinationPath "dist\${archiveName}.zip"
+
+      - name: Upload Windows ZIP
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.artifact-name }}
+          path: dist/*.zip
+          if-no-files-found: error

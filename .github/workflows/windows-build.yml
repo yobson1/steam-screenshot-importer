@@ -8,53 +8,6 @@ permissions:
 
 jobs:
   build:
-    runs-on: windows-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Rust build
-        uses: Swatinem/rust-cache@v2
-
-      - name: Install pkg-config
-        uses: crazy-max/ghaction-chocolatey@v4
-        with:
-          args: install pkgconfiglite
-
-      - name: Install dav1d
-        shell: pwsh
-        run: vcpkg install dav1d:x64-windows
-
-      - name: Build
-        shell: pwsh
-        env:
-          PKG_CONFIG_PATH: C:\vcpkg\installed\x64-windows\lib\pkgconfig
-        run: cargo build --release --locked
-
-      - name: Package
-        shell: pwsh
-        run: |
-          $stage = "dist\steam-screenshot-importer-windows-x86_64"
-          $steamApi = Get-ChildItem steam_api -Recurse -Filter steam_api64.dll |
-            Select-Object -First 1
-
-          if (-not $steamApi) {
-            throw "steam_api64.dll was not downloaded by build.rs"
-          }
-
-          New-Item -ItemType Directory -Force $stage | Out-Null
-          Copy-Item "target\release\steam-screenshot-importer.exe" $stage
-          Copy-Item $steamApi.FullName $stage
-          Copy-Item "C:\vcpkg\installed\x64-windows\bin\dav1d.dll" $stage
-          Compress-Archive -Path "$stage\*" -DestinationPath "$stage.zip"
-
-      - name: Upload Windows build
-        uses: actions/upload-artifact@v7
-        with:
-          name: steam-screenshot-importer-windows-x86_64
-          path: dist/steam-screenshot-importer-windows-x86_64.zip
-          if-no-files-found: error
+    uses: ./.github/workflows/release-build-windows.yml
+    with:
+      artifact-name: steam-screenshot-importer-windows-x86_64

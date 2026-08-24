@@ -1,0 +1,140 @@
+name: Release Build (Linux)
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: Release version, with or without a leading v
+        required: true
+        type: string
+    secrets:
+      GPG_PRIVATE_KEY:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: archlinux:base-devel
+
+    steps:
+      - name: Install Git for checkout
+        run: pacman -Syu --noconfirm --needed git
+
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Upgrade Arch Linux
+        uses: arch4edu/cactus/actions/upgrade-archlinux@main
+
+      - name: Install Arch build dependencies
+        run: |
+          pacman -Syu --noconfirm --needed \
+            cargo git gnupg jaq pacman-contrib zstd
+
+      - name: Create unprivileged build user
+        run: |
+          useradd -m builder
+          echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
+          chown -R builder:builder "$GITHUB_WORKSPACE"
+
+      - name: Import PKGBUILD signing key
+        run: |
+          sudo -u builder gpg --fetch-keys https://github.com/yobson1.gpg
+
+      - name: Output stripped version
+        id: version
+        shell: bash
+        env:
+          REQUESTED_VERSION: ${{ inputs.version }}
+        run: |
+          echo "version=${REQUESTED_VERSION#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Create source tarball
+        run: |
+          git config --global --add safe.directory "$(pwd)"
+          git archive --format=tar.gz --prefix=${{ github.event.repository.name }}-src_${{ steps.version.outputs.version }}/ \
+            -o ${{ github.event.repository.name }}-src_${{ steps.version.outputs.version }}.tar.gz \
+            ${{ github.ref }} -- . \
+            ':(exclude).github' \
+            ':(exclude)pkg/arch'
+
+      - name: Import GPG key
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+        run: |
+          echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+
+      - name: Sign tarball
+        run: |
+          gpg --batch --yes --local-user A41EB2986F63F6C40FCF2D03ED26A71EB8EB7A34 --detach-sign --armor \
+            ${{ github.event.repository.name }}-src_${{ steps.version.outputs.version }}.tar.gz
+
+      - name: Build Arch package
+        run: |
+          steamworks_rs_ver="$(
+            jaq --from toml -r '.package[] | select(.name == "steamworks") | .version' Cargo.lock | head -n1
+          )"
+
+          if [ -z "$steamworks_rs_ver" ]; then
+            echo "steamworks not found in Cargo.lock"
+            exit 1
+          fi
+
+          echo "steamworks-rs version: $steamworks_rs_ver"
+
+          cd pkg/arch
+
+          if [[ "${{ steps.version.outputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            sed -i "s/^pkgver=.*/pkgver=${{ steps.version.outputs.version }}/" PKGBUILD
+            sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+          else
+            echo "Version '${{ steps.version.outputs.version }}' does not match X.Y.Z, leaving pkgver/pkgrel unchanged"
+          fi
+
+          sed -i "s/^_steamworks_rs_ver=.*/_steamworks_rs_ver=${steamworks_rs_ver}/" PKGBUILD
+
+          # The release does not exist yet, so resolve its future assets from
+          # the workspace while generating checksums and building the package.
+          sed -i 's#${url}/releases/download/v${pkgver}#file://'"${GITHUB_WORKSPACE}"'#' PKGBUILD
+
+          sudo -u builder updpkgsums
+          sudo -u builder makepkg --syncdeps --noconfirm
+
+          # Keep the checksums generated from the local files, but publish a
+          # PKGBUILD whose sources point at the GitHub release.
+          sed -i 's#file://'"${GITHUB_WORKSPACE}"'#${url}/releases/download/v${pkgver}#' PKGBUILD
+
+      - name: Create portable Linux archive
+        run: |
+          archive_name="${{ github.event.repository.name }}-${{ steps.version.outputs.version }}-linux-x86_64"
+          stage="dist/${archive_name}"
+
+          install -Dm755 \
+            "pkg/arch/src/${{ github.event.repository.name }}-src_${{ steps.version.outputs.version }}/target/release/${{ github.event.repository.name }}" \
+            "${stage}/${{ github.event.repository.name }}"
+          install -Dm755 \
+            pkg/arch/src/libsteam_api.so \
+            "${stage}/libsteam_api.so"
+          tar -C dist -czf "dist/${archive_name}.tar.gz" "${archive_name}"
+
+      - name: Upload PKGBUILD artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: aur-pkgbuild
+          path: pkg/arch/PKGBUILD
+
+      - name: Upload Arch release asset
+        uses: actions/upload-artifact@v7
+        with:
+          name: arch
+          path: |
+            pkg/arch/*.pkg.tar.zst
+            !pkg/arch/*-debug-*.pkg.tar.zst
+            ${{ github.event.repository.name }}-src_${{ steps.version.outputs.version }}.tar.gz
+            ${{ github.event.repository.name }}-src_${{ steps.version.outputs.version }}.tar.gz.asc
+            dist/*-linux-x86_64.tar.gz
