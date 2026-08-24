@@ -34,13 +34,19 @@ struct Package {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("cargo:rerun-if-env-changed=NO_STEAMWORKS");
     println!("cargo:rerun-if-changed=Cargo.lock");
+    let target_os = std::env::var("CARGO_CFG_TARGET_OS")?;
+
+    if target_os == "linux" {
+        println!(
+            "cargo:rustc-link-arg-bin=steam-screenshot-importer=-Wl,--enable-new-dtags,-rpath,$ORIGIN:/usr/lib/steam-screenshot-importer"
+        );
+    }
 
     if std::env::var_os("NO_STEAMWORKS").is_some() {
         println!("cargo:warning=NO_STEAMWORKS set, skipping Steamworks binary fetch");
         return Ok(());
     }
 
-    let target_os = std::env::var("CARGO_CFG_TARGET_OS")?;
     let target_arch = std::env::var("CARGO_CFG_TARGET_ARCH")?;
     let remote_path = steamworks_remote_path(&target_os, &target_arch)?;
     let library_name = library_name(remote_path)?;
