@@ -1,7 +1,10 @@
-use std::{rc::Rc, time::Duration};
+use std::{
+    rc::Rc,
+    time::{Duration, Instant},
+};
 
 use gpui::{
-    Animation, AnimationExt as _, AnyElement, App, AppContext as _, ClickEvent, Context, ElementId,
+    Animation, AnimationExt as _, AnyElement, App, AppContext as _, ClickEvent, Context,
     EventEmitter, InteractiveElement as _, IntoElement, ParentElement as _, Pixels, Render,
     RenderOnce, Size, StatefulInteractiveElement as _, Styled as _, Transformation, Window, div,
     ease_in_out, percentage, prelude::FluentBuilder as _, px,
@@ -15,6 +18,7 @@ use gpui_component::{
 
 pub const MENU_WIDTH: f32 = 136.0;
 const MENU_ANIMATION_DURATION: Duration = Duration::from_millis(525);
+const NAV_SPIN_DURATION: Duration = Duration::from_millis(750);
 
 fn parse_app_id(value: &str) -> Option<u32> {
     value.trim().parse().ok()
@@ -68,50 +72,104 @@ impl NavItem {
     pub const fn spins(self) -> bool {
         !matches!(self, Self::Home)
     }
+
+    const fn index(self) -> usize {
+        match self {
+            Self::Home => 0,
+            Self::AppId => 1,
+            Self::About => 2,
+            Self::Options => 3,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+struct SpinTransition {
+    value: f32,
+    from: f32,
+    target: f32,
+    started_at: Option<Instant>,
+}
+
+impl Default for SpinTransition {
+    fn default() -> Self {
+        Self {
+            value: 0.0,
+            from: 0.0,
+            target: 0.0,
+            started_at: None,
+        }
+    }
+}
+
+impl SpinTransition {
+    fn set_hovered(&mut self, hovered: bool, now: Instant) {
+        self.tick(now);
+        let target = f32::from(hovered);
+        if (self.target - target).abs() < f32::EPSILON {
+            return;
+        }
+        self.from = self.value;
+        self.target = target;
+        self.started_at = Some(now);
+    }
+
+    fn tick(&mut self, now: Instant) -> bool {
+        let Some(started_at) = self.started_at else {
+            return false;
+        };
+        let elapsed = now.saturating_duration_since(started_at);
+        let delta = (elapsed.as_secs_f32() / NAV_SPIN_DURATION.as_secs_f32()).min(1.0);
+        self.value = self.from + (self.target - self.from) * ease_in_out(delta);
+        if delta >= 1.0 {
+            self.value = self.target;
+            self.started_at = None;
+            false
+        } else {
+            true
+        }
+    }
+
+    fn reset(&mut self) {
+        *self = Self::default();
+    }
 }
 
 type ClickHandler = Rc<dyn Fn(&ClickEvent, &mut Window, &mut App)>;
 type HoverHandler = Rc<dyn Fn(&bool, &mut Window, &mut App)>;
 
 #[derive(IntoElement)]
-pub struct NavButton {
+struct NavButton {
     item: NavItem,
-    hovered: bool,
+    rotation: f32,
     on_click: Option<ClickHandler>,
     on_hover: HoverHandler,
 }
 
 impl NavButton {
-    pub fn new(
+    fn new(
         item: NavItem,
-        hovered: bool,
+        rotation: f32,
         on_hover: impl Fn(&bool, &mut Window, &mut App) + 'static,
     ) -> Self {
         Self {
             item,
-            hovered,
+            rotation,
             on_click: None,
             on_hover: Rc::new(on_hover),
         }
     }
 
-    pub fn on_click(
-        mut self,
-        on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
-    ) -> Self {
+    fn on_click(mut self, on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static) -> Self {
         self.on_click = Some(Rc::new(on_click));
         self
     }
 
     fn render_icon(&self) -> AnyElement {
         let icon = Icon::new(self.item.icon()).size(px(25.0));
-        if self.hovered && self.item.spins() {
-            icon.with_animation(
-                ElementId::Name(format!("nav-spin-{}", self.item.accessibility_id()).into()),
-                Animation::new(Duration::from_millis(750)).with_easing(ease_in_out),
-                |icon, delta| icon.transform(Transformation::rotate(percentage(delta))),
-            )
-            .into_any_element()
+        if self.item.spins() && self.rotation > 0.0 {
+            icon.transform(Transformation::rotate(percentage(self.rotation)))
+                .into_any_element()
         } else {
             icon.into_any_element()
         }
@@ -152,7 +210,7 @@ pub struct Menu {
     open: bool,
     closing: bool,
     transition_epoch: u64,
-    hovered_item: Option<NavItem>,
+    spin_transitions: [SpinTransition; 4],
     app_id_input: gpui::Entity<InputState>,
 }
 
@@ -167,7 +225,7 @@ impl Menu {
             open: false,
             closing: false,
             transition_epoch: 0,
-            hovered_item: None,
+            spin_transitions: [SpinTransition::default(); 4],
             app_id_input,
         }
     }
@@ -192,7 +250,9 @@ impl Menu {
         self.closing = true;
         self.transition_epoch = self.transition_epoch.wrapping_add(1);
         let transition_epoch = self.transition_epoch;
-        self.hovered_item = None;
+        for transition in &mut self.spin_transitions {
+            transition.reset();
+        }
         cx.notify();
 
         cx.spawn(async move |this, cx| {
@@ -217,12 +277,26 @@ impl Menu {
     fn render_nav_button(&self, item: NavItem, cx: &Context<Self>) -> NavButton {
         NavButton::new(
             item,
-            self.hovered_item == Some(item),
+            self.spin_transitions[item.index()].value,
             cx.listener(move |this, hovered: &bool, _, cx| {
-                this.hovered_item = hovered.then_some(item);
+                this.set_item_hovered(item, *hovered);
                 cx.notify();
             }),
         )
+    }
+
+    fn set_item_hovered(&mut self, item: NavItem, hovered: bool) {
+        if item.spins() {
+            self.spin_transitions[item.index()].set_hovered(hovered, Instant::now());
+        }
+    }
+
+    fn tick_spin_transitions(&mut self, now: Instant) -> bool {
+        let mut animating = false;
+        for transition in &mut self.spin_transitions {
+            animating |= transition.tick(now);
+        }
+        animating
     }
 
     fn render_drawer(&self, viewport: Size<Pixels>, cx: &mut Context<Self>) -> impl IntoElement {
@@ -341,6 +415,9 @@ impl EventEmitter<MenuEvent> for Menu {}
 
 impl Render for Menu {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        if self.tick_spin_transitions(Instant::now()) {
+            window.request_animation_frame();
+        }
         let viewport = window.viewport_size();
         div()
             .absolute()
@@ -379,5 +456,20 @@ mod tests {
         assert_eq!(parse_app_id("not an id"), None);
         assert_eq!(parse_app_id("-1"), None);
         assert_eq!(parse_app_id("12games"), None);
+    }
+
+    #[test]
+    fn interrupted_spin_reverses_from_its_current_rotation() {
+        let started_at = Instant::now();
+        let mut transition = SpinTransition::default();
+        transition.set_hovered(true, started_at);
+        transition.tick(started_at + NAV_SPIN_DURATION / 2);
+        let interrupted_rotation = transition.value;
+
+        transition.set_hovered(false, started_at + NAV_SPIN_DURATION / 2);
+        assert!((transition.value - interrupted_rotation).abs() < f32::EPSILON);
+
+        transition.tick(started_at + NAV_SPIN_DURATION);
+        assert!(transition.value < interrupted_rotation);
     }
 }
