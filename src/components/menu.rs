@@ -2,9 +2,9 @@ use std::{rc::Rc, time::Duration};
 
 use gpui::{
     Animation, AnimationExt as _, AnyElement, App, AppContext as _, ClickEvent, Context, ElementId,
-    EventEmitter, InteractiveElement as _, IntoElement, ParentElement as _, Render, RenderOnce,
-    StatefulInteractiveElement as _, Styled as _, Transformation, Window, div, ease_in_out,
-    percentage, prelude::FluentBuilder as _, px,
+    EventEmitter, InteractiveElement as _, IntoElement, ParentElement as _, Pixels, Render,
+    RenderOnce, Size, StatefulInteractiveElement as _, Styled as _, Transformation, Window, div,
+    ease_in_out, percentage, prelude::FluentBuilder as _, px,
 };
 use gpui_component::{
     ActiveTheme as _, Icon, IconName, StyledExt as _, WindowExt as _,
@@ -197,7 +197,7 @@ impl Menu {
         )
     }
 
-    fn render_drawer(&self, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render_drawer(&self, viewport: Size<Pixels>, cx: &mut Context<Self>) -> impl IntoElement {
         let home = self
             .render_nav_button(NavItem::Home, cx)
             .on_click(cx.listener(|this, _, _, cx| this.navigate(NavItem::Home, cx)));
@@ -241,9 +241,9 @@ impl Menu {
                 div()
                     .id("menu-backdrop")
                     .absolute()
+                    .w(viewport.width)
+                    .h(viewport.height)
                     .top_0()
-                    .right_0()
-                    .bottom_0()
                     .left_0()
                     .on_click(cx.listener(|this, _, _, cx| this.close(cx))),
             )
@@ -252,9 +252,9 @@ impl Menu {
                     .id("navigation-menu")
                     .absolute()
                     .top_0()
-                    .bottom_0()
                     .left_0()
                     .w(px(MENU_WIDTH))
+                    .h(viewport.height)
                     .pt(px(88.0))
                     .px(px(36.0))
                     .flex()
@@ -298,14 +298,15 @@ impl Menu {
 impl EventEmitter<MenuEvent> for Menu {}
 
 impl Render for Menu {
-    fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let viewport = window.viewport_size();
         div()
             .absolute()
             .top_0()
-            .right_0()
-            .bottom_0()
             .left_0()
-            .when(self.open, |menu| menu.child(self.render_drawer(cx)))
+            .when(self.open, |menu| {
+                menu.child(self.render_drawer(viewport, cx))
+            })
             .child(self.render_toggle(cx))
     }
 }
