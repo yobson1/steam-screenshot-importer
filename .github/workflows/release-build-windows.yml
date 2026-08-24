@@ -47,7 +47,7 @@ jobs:
         shell: pwsh
         run: |
           dotnet build "wix\installer.wixproj" `
-            --configuration Release `
+            --configuration Validation `
             "-p:SourceDir=$env:WIX_VALIDATION_STAGE" `
             "-p:ProductVersion=1.0.0" `
             "-p:OutputPath=$env:WIX_VALIDATION_OUTPUT\" `
@@ -118,6 +118,7 @@ jobs:
           dotnet build "wix\installer.wixproj" `
             --configuration Release `
             --no-restore `
+            --no-incremental `
             "-p:SourceDir=$env:WINDOWS_STAGE" `
             "-p:ProductVersion=$env:MSI_VERSION" `
             "-p:OutputPath=$output\" `
