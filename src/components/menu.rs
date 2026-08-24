@@ -366,6 +366,8 @@ impl Menu {
                     .gap_5()
                     .overflow_y_scroll()
                     .bg(cx.theme().sidebar)
+                    .border_r_1()
+                    .border_color(cx.theme().border)
                     .shadow(vec![BoxShadow {
                         color: hsla(0.0, 0.0, 0.0, 0.4),
                         offset: point(px(0.0), px(0.0)),
