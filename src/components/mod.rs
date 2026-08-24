@@ -1,3 +1,4 @@
+pub mod footer;
 pub mod game_tile;
 pub mod import_progress;
 pub mod menu;

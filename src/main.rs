@@ -24,6 +24,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use components::footer::footer;
 use components::game_tile::{
     GameTileMotion, GameTileProps, Pointer, game_tile, offscreen_vertices,
     projected_vertices_changed,
@@ -475,6 +476,7 @@ impl Render for SteamScreenshotImporter {
             .size_full()
             .bg(background)
             .child(page)
+            .child(footer(cx))
             .child(self.menu.clone())
             .child(theme_toggle(cx))
             .children(sheet_layer)
