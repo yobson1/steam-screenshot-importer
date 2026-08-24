@@ -270,7 +270,6 @@ impl Menu {
     }
 
     fn navigate(&mut self, item: NavItem, cx: &mut Context<Self>) {
-        self.close(cx);
         cx.emit(MenuEvent::Navigate(item));
     }
 
