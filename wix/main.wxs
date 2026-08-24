@@ -24,7 +24,6 @@
       DowngradeErrorMessage="A newer version of Steam Screenshot Importer is already installed." />
     <MediaTemplate EmbedCab="yes" />
 
-    <Property Id="ARPNOMODIFY" Value="1" />
     <Property Id="ARPNOREPAIR" Value="1" />
     <Icon Id="ProductIcon" SourceFile="assets\icons\steam-screenshot-importer.ico" />
     <Property Id="ARPPRODUCTICON" Value="ProductIcon" />
