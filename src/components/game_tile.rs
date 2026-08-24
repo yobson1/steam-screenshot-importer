@@ -46,6 +46,18 @@ impl Default for GameTileMotion {
 }
 
 impl GameTileMotion {
+    pub fn set_hovered(&mut self, hovered: bool) {
+        self.hover_target = hovered;
+        if !hovered {
+            self.pointer_target = Pointer::default();
+        }
+    }
+
+    pub fn set_pointer(&mut self, pointer: Pointer) {
+        self.hover_target = true;
+        self.pointer_target = pointer;
+    }
+
     pub fn tick(&mut self, dt: Duration) -> bool {
         let hover_target = f32::from(self.hover_target);
         let pointer_target = if self.hover_target {
@@ -84,11 +96,12 @@ pub struct GameTileProps {
 pub fn game_tile(
     props: GameTileProps,
     on_hover: impl Fn(&bool, &mut Window, &mut App) + 'static,
-    on_mouse_move: impl Fn(&MouseMoveEvent, &mut Window, &mut App) + 'static,
+    on_pointer_move: impl Fn(&Pointer, &mut Window, &mut App) + 'static,
     on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
 ) -> impl IntoElement {
     let left = (SLOT_WIDTH - CARD_WIDTH) * 0.5;
     let top = (SLOT_HEIGHT - CARD_HEIGHT) * 0.5;
+    let pointer_bounds = props.bounds.clone();
 
     div()
         .relative()
@@ -113,7 +126,10 @@ pub fn game_tile(
                     props.glare,
                 ))
                 .on_hover(on_hover)
-                .on_mouse_move(on_mouse_move)
+                .on_mouse_move(move |event: &MouseMoveEvent, window, cx| {
+                    let pointer = pointer_in_bounds(event.position, pointer_bounds.get());
+                    on_pointer_move(&pointer, window, cx);
+                })
                 .on_click(on_click),
         )
 }
@@ -442,6 +458,17 @@ fn approach(current: f32, target: f32, dt: Duration, responsiveness: f32) -> f32
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn leaving_a_tile_centers_its_pointer_target() {
+        let mut motion = GameTileMotion::default();
+        motion.set_pointer(Pointer { x: 0.75, y: -0.5 });
+        assert!(motion.hover_target);
+
+        motion.set_hovered(false);
+        assert!(!motion.hover_target);
+        assert_eq!(motion.pointer_target, Pointer::default());
+    }
 
     #[test]
     fn pointer_coordinates_are_normalized_and_clamped() {

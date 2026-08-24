@@ -1,4 +1,4 @@
-use gpui::{IntoElement, ParentElement as _, Styled as _, div};
+use gpui::{App, IntoElement, ParentElement as _, Styled as _, div};
 use gpui_component::{
     ActiveTheme as _, IconName, Theme, ThemeMode,
     button::{Button, ButtonVariants as _},
@@ -6,8 +6,8 @@ use gpui_component::{
 
 use crate::preferences;
 
-pub fn theme_toggle(is_dark: bool) -> impl IntoElement {
-    let icon = if is_dark {
+pub fn theme_toggle(cx: &App) -> impl IntoElement {
+    let icon = if cx.theme().is_dark() {
         IconName::Sun
     } else {
         IconName::Moon

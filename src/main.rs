@@ -19,13 +19,14 @@ use std::{
 };
 
 use components::game_tile::{
-    GameTileMotion, GameTileProps, Pointer, game_tile, offscreen_vertices, pointer_in_bounds,
+    GameTileMotion, GameTileProps, Pointer, game_tile, offscreen_vertices,
     projected_vertices_changed,
 };
+use components::menu::{Menu, MenuEvent, NavItem};
 use components::theme_toggle::theme_toggle;
 use gpui::{
-    App, Bounds, Context, MouseMoveEvent, Pixels, Render, RenderImage, Window, WindowBounds,
-    WindowOptions, div, prelude::*, px, size,
+    App, Bounds, Context, Pixels, Render, RenderImage, Window, WindowBounds, WindowOptions, div,
+    prelude::*, px, size,
 };
 use gpui_component::{
     ActiveTheme as _, Root, Theme, ThemeRegistry,
@@ -78,8 +79,10 @@ struct SteamScreenshotImporter {
     retired_images: Vec<Arc<RenderImage>>,
     steam_user: Option<String>,
     library_state: LibraryState,
+    menu: gpui::Entity<Menu>,
     last_frame: Instant,
     _appearance_subscription: gpui::Subscription,
+    _menu_subscription: gpui::Subscription,
 }
 
 impl SteamScreenshotImporter {
@@ -103,6 +106,14 @@ impl SteamScreenshotImporter {
         .detach();
 
         let now = Instant::now();
+        let menu = cx.new(|cx| Menu::new(window, cx));
+        let menu_subscription = cx.subscribe(&menu, |_, _, event, _| match event {
+            MenuEvent::Navigate(NavItem::Home) => {}
+            MenuEvent::Navigate(NavItem::About) => info!("About navigation selected"),
+            MenuEvent::Navigate(NavItem::Options) => info!("Options navigation selected"),
+            MenuEvent::Navigate(NavItem::AppId) => unreachable!("App ID uses a dialog"),
+            MenuEvent::CustomAppId(app_id) => info!("Selected custom Steam app {app_id}"),
+        });
         let appearance_subscription = cx.observe_window_appearance(window, |_, window, cx| {
             if preferences::selected_theme(cx).is_none() {
                 Theme::sync_system_appearance(Some(window), cx);
@@ -117,8 +128,10 @@ impl SteamScreenshotImporter {
             retired_images: Vec::new(),
             steam_user: None,
             library_state: LibraryState::Loading,
+            menu,
             last_frame: now,
             _appearance_subscription: appearance_subscription,
+            _menu_subscription: menu_subscription,
         }
     }
 
@@ -231,17 +244,11 @@ impl SteamScreenshotImporter {
         game_tile(
             props,
             cx.listener(move |this, hovering, _, cx| {
-                let motion = &mut this.cards[index].motion;
-                motion.hover_target = *hovering;
-                if !hovering {
-                    motion.pointer_target = Pointer::default();
-                }
+                this.cards[index].motion.set_hovered(*hovering);
                 cx.notify();
             }),
-            cx.listener(move |this, event: &MouseMoveEvent, _, cx| {
-                let card = &mut this.cards[index];
-                card.motion.hover_target = true;
-                card.motion.pointer_target = pointer_in_bounds(event.position, card.bounds.get());
+            cx.listener(move |this, pointer, _, cx| {
+                this.cards[index].motion.set_pointer(*pointer);
                 cx.notify();
             }),
             cx.listener(move |_, _, _, _| {
@@ -345,7 +352,8 @@ impl Render for SteamScreenshotImporter {
             .size_full()
             .bg(background)
             .child(page)
-            .child(theme_toggle(cx.theme().is_dark()));
+            .child(self.menu.clone())
+            .child(theme_toggle(cx));
 
         #[cfg(feature = "fps")]
         let content =
