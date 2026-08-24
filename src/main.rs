@@ -8,6 +8,7 @@ mod components;
 mod fallback_artwork;
 mod image_fetch;
 mod offscreen;
+mod pages;
 mod preferences;
 mod steam_locate;
 
@@ -28,14 +29,14 @@ use gpui::{
     App, Bounds, Context, Pixels, Render, RenderImage, Window, WindowBounds, WindowOptions, div,
     prelude::*, px, size,
 };
-use gpui_component::{
-    ActiveTheme as _, Root, Theme, ThemeRegistry,
-    scroll::{ScrollableElement as _, ScrollbarMode},
-    spinner::Spinner,
-};
+use gpui_component::{ActiveTheme as _, Root, Theme, ThemeRegistry, scroll::ScrollbarMode};
 use image::{Frame, RgbaImage, imageops::FilterType};
 use log::{error, info};
 use offscreen::{OffscreenRenderer, ProjectedVertex, RenderTag};
+use pages::{
+    Route, Router,
+    routes::{AboutPage, HomePage},
+};
 use rayon::prelude::*;
 use steam_locate::GameArtwork;
 
@@ -79,6 +80,7 @@ struct SteamScreenshotImporter {
     retired_images: Vec<Arc<RenderImage>>,
     steam_user: Option<String>,
     library_state: LibraryState,
+    router: Router,
     menu: gpui::Entity<Menu>,
     last_frame: Instant,
     _appearance_subscription: gpui::Subscription,
@@ -107,9 +109,17 @@ impl SteamScreenshotImporter {
 
         let now = Instant::now();
         let menu = cx.new(|cx| Menu::new(window, cx));
-        let menu_subscription = cx.subscribe(&menu, |_, _, event, _| match event {
-            MenuEvent::Navigate(NavItem::Home) => {}
-            MenuEvent::Navigate(NavItem::About) => info!("About navigation selected"),
+        let menu_subscription = cx.subscribe(&menu, |this, _, event, cx| match event {
+            MenuEvent::Navigate(NavItem::Home) => {
+                if this.router.navigate(Route::Home) {
+                    cx.notify();
+                }
+            }
+            MenuEvent::Navigate(NavItem::About) => {
+                if this.router.navigate(Route::About) {
+                    cx.notify();
+                }
+            }
             MenuEvent::Navigate(NavItem::Options) => info!("Options navigation selected"),
             MenuEvent::Navigate(NavItem::AppId) => unreachable!("App ID uses a dialog"),
             MenuEvent::CustomAppId(app_id) => info!("Selected custom Steam app {app_id}"),
@@ -128,6 +138,7 @@ impl SteamScreenshotImporter {
             retired_images: Vec::new(),
             steam_user: None,
             library_state: LibraryState::Loading,
+            router: Router::default(),
             menu,
             last_frame: now,
             _appearance_subscription: appearance_subscription,
@@ -263,15 +274,11 @@ impl SteamScreenshotImporter {
             |user| format!("WELCOME {}!", user.to_uppercase()),
         )
     }
-}
 
-impl Render for SteamScreenshotImporter {
-    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        self.tick_cards(window);
-
+    fn render_home_page(&self, cx: &Context<Self>) -> HomePage {
         let cards = (0..self.cards.len())
             .map(|index| self.render_card(index, cx).into_any_element())
-            .collect::<Vec<_>>();
+            .collect();
         let is_loading = matches!(self.library_state, LibraryState::Loading);
         let library_message = match &self.library_state {
             LibraryState::Ready if self.cards.is_empty() => {
@@ -280,72 +287,21 @@ impl Render for SteamScreenshotImporter {
             LibraryState::Failed(message) => Some(format!("Error: {message}")),
             LibraryState::Loading | LibraryState::Ready => None,
         };
-        let background = cx.theme().background;
-        let foreground = cx.theme().foreground;
-        let primary = cx.theme().primary;
-        let muted_foreground = cx.theme().muted_foreground;
 
-        let page = div()
-            .id("main-page-scroll")
-            .size_full()
-            .flex()
-            .flex_col()
-            .bg(background)
-            .text_color(foreground)
-            .child(
-                div()
-                    .flex_none()
-                    .w_full()
-                    .pt_6()
-                    .pb_2()
-                    .flex()
-                    .items_center()
-                    .justify_center()
-                    .child(
-                        div()
-                            .text_size(px(40.0))
-                            .font_weight(gpui::FontWeight::THIN)
-                            .text_color(primary)
-                            .child(self.welcome_text()),
-                    ),
-            )
-            .child(
-                div()
-                    .id("game-library")
-                    .w_full()
-                    .px_5()
-                    .pb_8()
-                    .flex()
-                    .flex_wrap()
-                    .justify_center()
-                    .items_start()
-                    .when(is_loading, |gallery| {
-                        gallery.child(
-                            div()
-                                .w_full()
-                                .flex()
-                                .items_center()
-                                .justify_center()
-                                .gap_2()
-                                .text_sm()
-                                .text_color(muted_foreground)
-                                .child(Spinner::new().color(primary))
-                                .child("Fetching games."),
-                        )
-                    })
-                    .when_some(library_message, |gallery, message| {
-                        gallery.child(
-                            div()
-                                .w_full()
-                                .text_center()
-                                .text_sm()
-                                .text_color(muted_foreground)
-                                .child(message),
-                        )
-                    })
-                    .children(cards),
-            )
-            .overflow_y_scrollbar();
+        HomePage::new(self.welcome_text(), cards, is_loading, library_message)
+    }
+}
+
+impl Render for SteamScreenshotImporter {
+    fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
+        let background = cx.theme().background;
+        let page = match self.router.current() {
+            Route::Home => {
+                self.tick_cards(window);
+                self.render_home_page(cx).into_any_element()
+            }
+            Route::About => AboutPage.into_any_element(),
+        };
 
         let content = div()
             .relative()
