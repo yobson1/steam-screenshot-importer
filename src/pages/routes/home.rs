@@ -1,12 +1,80 @@
 use gpui::{
-    AnyElement, App, InteractiveElement as _, IntoElement, ParentElement as _, RenderOnce,
-    Styled as _, div, prelude::FluentBuilder as _, px,
+    AnyElement, App, AppContext as _, Context, Entity, EventEmitter, Focusable as _,
+    InteractiveElement as _, IntoElement, MouseButton, ParentElement as _, Render, RenderOnce,
+    Styled as _, Subscription, Window, div, prelude::FluentBuilder as _, px,
 };
-use gpui_component::{ActiveTheme as _, scroll::ScrollableElement as _, spinner::Spinner};
+use gpui_component::{
+    ActiveTheme as _, Icon, IconName, Sizable as _,
+    input::{Input, InputEvent, InputState},
+    scroll::ScrollableElement as _,
+    spinner::Spinner,
+};
+
+pub struct GameSearchEvent;
+
+pub struct GameSearch {
+    input: Entity<InputState>,
+    _subscription: Subscription,
+}
+
+impl EventEmitter<GameSearchEvent> for GameSearch {}
+
+impl GameSearch {
+    pub fn new(window: &mut Window, cx: &mut Context<Self>) -> Self {
+        let input = cx.new(|cx| {
+            InputState::new(window, cx)
+                .placeholder("Search your games…")
+                .clean_on_escape()
+        });
+        let subscription = cx.subscribe(&input, |_, _, event: &InputEvent, cx| {
+            if let InputEvent::Change = event {
+                cx.emit(GameSearchEvent);
+                cx.notify();
+            }
+        });
+
+        Self {
+            input,
+            _subscription: subscription,
+        }
+    }
+
+    pub fn query(&self, cx: &App) -> String {
+        self.input.read(cx).value().to_string()
+    }
+}
+
+impl Render for GameSearch {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        let blur_input = self.input.clone();
+        let focus_input = self.input.clone();
+
+        div()
+            .w_full()
+            .max_w(px(520.0))
+            .on_mouse_down(MouseButton::Left, move |_, window, cx| {
+                focus_input.update(cx, |input, cx| input.focus(window, cx));
+            })
+            .on_mouse_down_out(move |_, window, cx| {
+                if blur_input.read(cx).focus_handle(cx).is_focused(window) {
+                    window.blur();
+                }
+            })
+            .child(
+                Input::new(&self.input)
+                    .w_full()
+                    .cleanable(true)
+                    .aria_label("Search games")
+                    .prefix(Icon::new(IconName::Search).small()),
+            )
+    }
+}
 
 #[derive(IntoElement)]
 pub struct HomePage {
     welcome_text: String,
+    game_search: Entity<GameSearch>,
+    show_search: bool,
     cards: Vec<AnyElement>,
     is_loading: bool,
     library_message: Option<String>,
@@ -15,12 +83,16 @@ pub struct HomePage {
 impl HomePage {
     pub fn new(
         welcome_text: String,
+        game_search: Entity<GameSearch>,
+        show_search: bool,
         cards: Vec<AnyElement>,
         is_loading: bool,
         library_message: Option<String>,
     ) -> Self {
         Self {
             welcome_text,
+            game_search,
+            show_search,
             cards,
             is_loading,
             library_message,
@@ -59,6 +131,18 @@ impl RenderOnce for HomePage {
                             .child(self.welcome_text),
                     ),
             )
+            .when(self.show_search, |page| {
+                page.child(
+                    div()
+                        .flex_none()
+                        .w_full()
+                        .px_5()
+                        .pb_6()
+                        .flex()
+                        .justify_center()
+                        .child(self.game_search),
+                )
+            })
             .child(
                 div()
                     .id("game-library")

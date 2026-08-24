@@ -44,7 +44,7 @@ use log::{error, info};
 use offscreen::{OffscreenRenderer, ProjectedVertex, RenderTag};
 use pages::{
     Route, Router,
-    routes::{AboutPage, HomePage, OptionsPage},
+    routes::{AboutPage, GameSearch, GameSearchEvent, HomePage, OptionsPage},
 };
 use preferences::{Preference as _, Preferences};
 use rayon::prelude::*;
@@ -67,6 +67,7 @@ struct LoadedLibrary {
 
 struct CardState {
     app_id: u32,
+    app_name: String,
     artwork_handle: usize,
     artwork: Arc<RenderImage>,
     artwork_is_projected: bool,
@@ -92,12 +93,14 @@ struct SteamScreenshotImporter {
     steam_user: Option<String>,
     library_state: LibraryState,
     importing: bool,
+    game_search: gpui::Entity<GameSearch>,
     router: Router,
     menu: gpui::Entity<Menu>,
     options_page: gpui::Entity<OptionsPage>,
     last_frame: Instant,
     _appearance_subscription: gpui::Subscription,
     _menu_subscription: gpui::Subscription,
+    _search_subscription: gpui::Subscription,
 }
 
 impl SteamScreenshotImporter {
@@ -123,6 +126,9 @@ impl SteamScreenshotImporter {
         let now = Instant::now();
         let menu = cx.new(|cx| Menu::new(window, cx));
         let options_page = cx.new(|cx| OptionsPage::new(window, cx));
+        let game_search = cx.new(|cx| GameSearch::new(window, cx));
+        let search_subscription =
+            cx.subscribe(&game_search, |_, _, _: &GameSearchEvent, cx| cx.notify());
         let menu_subscription = cx.subscribe(&menu, |this, _, event, cx| match event {
             MenuEvent::Navigate(NavItem::Home) => {
                 if this.router.navigate(Route::Home) {
@@ -172,12 +178,14 @@ impl SteamScreenshotImporter {
             steam_user: None,
             library_state: LibraryState::Loading,
             importing: false,
+            game_search,
             router: Router::default(),
             menu,
             options_page,
             last_frame: now,
             _appearance_subscription: appearance_subscription,
             _menu_subscription: menu_subscription,
+            _search_subscription: search_subscription,
         }
     }
 
@@ -190,6 +198,7 @@ impl SteamScreenshotImporter {
                 let artwork_handle = self.offscreen.upload_artwork(&game.pixels);
                 CardState {
                     app_id: game.app_id,
+                    app_name: game.app_name,
                     artwork_handle,
                     artwork: render_image_from_bgra(game.pixels),
                     artwork_is_projected: false,
@@ -405,7 +414,17 @@ impl SteamScreenshotImporter {
     }
 
     fn render_home_page(&self, cx: &Context<Self>) -> HomePage {
-        let cards = (0..self.cards.len())
+        let search_query = self.game_search.read(cx).query(cx);
+        let query = search_query.trim();
+        let matching_indices = self
+            .cards
+            .iter()
+            .enumerate()
+            .filter_map(|(index, card)| game_matches_search(&card.app_name, query).then_some(index))
+            .collect::<Vec<_>>();
+        let cards = matching_indices
+            .iter()
+            .copied()
             .map(|index| self.render_card(index, cx).into_any_element())
             .collect();
         let is_loading = matches!(self.library_state, LibraryState::Loading);
@@ -413,12 +432,27 @@ impl SteamScreenshotImporter {
             LibraryState::Ready if self.cards.is_empty() => {
                 Some("No installed Steam games were found.".to_owned())
             }
+            LibraryState::Ready if matching_indices.is_empty() => {
+                Some(format!("No games found matching \"{query}\"."))
+            }
             LibraryState::Failed(message) => Some(format!("Error: {message}")),
             LibraryState::Loading | LibraryState::Ready => None,
         };
 
-        HomePage::new(self.welcome_text(), cards, is_loading, library_message)
+        HomePage::new(
+            self.welcome_text(),
+            self.game_search.clone(),
+            matches!(self.library_state, LibraryState::Ready) && !self.cards.is_empty(),
+            cards,
+            is_loading,
+            library_message,
+        )
     }
+}
+
+fn game_matches_search(game_name: &str, query: &str) -> bool {
+    let query = query.trim();
+    query.is_empty() || game_name.to_lowercase().contains(&query.to_lowercase())
 }
 
 impl Render for SteamScreenshotImporter {
@@ -610,5 +644,12 @@ mod tests {
         let fixture = include_bytes!("../screenshots/fixtures/108600.jpg");
         let pixels = decode_artwork(fixture).expect("fixture should decode");
         assert_eq!(pixels.dimensions(), (ARTWORK_WIDTH, ARTWORK_HEIGHT));
+    }
+
+    #[test]
+    fn game_search_is_case_insensitive_and_ignores_surrounding_whitespace() {
+        assert!(game_matches_search("Half-Life 2", " half-LIFE "));
+        assert!(game_matches_search("Portal", ""));
+        assert!(!game_matches_search("Portal", "Dota"));
     }
 }
