@@ -26,6 +26,8 @@
 
     <Property Id="ARPNOMODIFY" Value="1" />
     <Property Id="ARPNOREPAIR" Value="1" />
+    <Icon Id="ProductIcon" SourceFile="assets\icons\steam-screenshot-importer.ico" />
+    <Property Id="ARPPRODUCTICON" Value="ProductIcon" />
     <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
 
     <Directory Id="TARGETDIR" Name="SourceDir">
@@ -50,6 +52,7 @@
             Name="Steam Screenshot Importer"
             Description="Run Steam Screenshot Importer"
             Advertise="yes"
+            Icon="ProductIcon"
             WorkingDirectory="INSTALLFOLDER" />
         </File>
         <RemoveFolder
