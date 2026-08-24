@@ -4,10 +4,10 @@ use std::{
 };
 
 use gpui::{
-    Animation, AnimationExt as _, AnyElement, App, AppContext as _, ClickEvent, Context,
+    Animation, AnimationExt as _, AnyElement, App, AppContext as _, BoxShadow, ClickEvent, Context,
     EventEmitter, InteractiveElement as _, IntoElement, ParentElement as _, Pixels, Render,
     RenderOnce, Size, StatefulInteractiveElement as _, Styled as _, Transformation, Window, div,
-    ease_in_out, percentage, prelude::FluentBuilder as _, px,
+    ease_in_out, hsla, percentage, point, prelude::FluentBuilder as _, px,
 };
 use gpui_component::{
     ActiveTheme as _, Icon, IconName, StyledExt as _, WindowExt as _,
@@ -366,7 +366,13 @@ impl Menu {
                     .gap_5()
                     .overflow_y_scroll()
                     .bg(cx.theme().sidebar)
-                    .shadow_2xl()
+                    .shadow(vec![BoxShadow {
+                        color: hsla(0.0, 0.0, 0.0, 0.4),
+                        offset: point(px(0.0), px(0.0)),
+                        blur_radius: px(4.0),
+                        spread_radius: px(5.0),
+                        inset: false,
+                    }])
                     .occlude()
                     .children([
                         home.into_any_element(),
