@@ -38,7 +38,7 @@ gpui = { git = "https://github.com/zed-industries/zed" }
 gpui_platform = { git = "https://github.com/zed-industries/zed", features = ["wayland", "x11"] }
 image = { version = "0.25", features = ["avif-native"] }
 log = "0.4"
-pollster = "0.4"
+pollster = "1.0"
 rayon = "1.12"
 reqwest = { version = "0.13", features = ["blocking", "json", "query"] }
 rfd = "0.17"
