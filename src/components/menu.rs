@@ -316,16 +316,21 @@ impl Menu {
     }
 
     fn render_toggle(&self, cx: &Context<Self>) -> impl IntoElement {
+        let icon = if self.open {
+            IconName::ArrowLeft
+        } else {
+            IconName::Menu
+        };
+
         Button::new("menu-toggle")
             .absolute()
             .top_3()
             .left_4()
+            .w(px(48.0))
+            .h(px(48.0))
+            .p_0()
             .ghost()
-            .icon(if self.open {
-                IconName::ArrowLeft
-            } else {
-                IconName::Menu
-            })
+            .child(Icon::new(icon).size(px(30.0)))
             .toggled(self.open)
             .accessibility_id("menu-toggle")
             .on_click(cx.listener(|this, _, _, cx| this.toggle(cx)))

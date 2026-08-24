@@ -1,6 +1,6 @@
-use gpui::{App, IntoElement, ParentElement as _, Styled as _, div};
+use gpui::{App, IntoElement, ParentElement as _, Styled as _, div, px};
 use gpui_component::{
-    ActiveTheme as _, IconName, Theme, ThemeMode,
+    ActiveTheme as _, Icon, IconName, Theme, ThemeMode,
     button::{Button, ButtonVariants as _},
 };
 
@@ -15,8 +15,11 @@ pub fn theme_toggle(cx: &App) -> impl IntoElement {
 
     div().absolute().top_3().right_4().child(
         Button::new("theme-toggle")
+            .w(px(48.0))
+            .h(px(48.0))
+            .p_0()
             .ghost()
-            .icon(icon)
+            .child(Icon::new(icon).size(px(30.0)))
             .accessibility_id("theme-toggle")
             .on_click(|_, window, cx| {
                 let mode = if cx.theme().is_dark() {
