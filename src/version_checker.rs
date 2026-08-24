@@ -1,8 +1,13 @@
 use anyhow::Context as _;
 use gpui::{App, InteractiveElement as _, ParentElement as _, Styled as _, Window, div, px};
 use gpui_component::{
-    WindowExt as _, dialog::DialogButtonProps, notification::NotificationType,
-    scroll::ScrollableElement as _, text::TextView,
+    WindowExt as _,
+    button::{Button, ButtonVariants as _},
+    dialog::{Cancel, DialogAction, DialogClose, DialogFooter, DialogTitle},
+    notification::NotificationType,
+    scroll::ScrollableElement as _,
+    text::TextView,
+    v_flex,
 };
 use log::{error, info};
 use semver::Version;
@@ -107,25 +112,41 @@ fn show_update(release: Release, window: &mut Window, cx: &mut App) {
     window.open_dialog(cx, move |dialog, _, _| {
         let url = url.clone();
         dialog
-            .title(title.clone())
             .width(px(640.0))
-            .button_props(
-                DialogButtonProps::default()
-                    .ok_text("Open release")
-                    .cancel_text("Dismiss")
-                    .show_cancel(true),
-            )
+            .overlay_closable(false)
             .on_ok(move |_, _, cx| {
                 cx.open_url(&url);
                 true
             })
             .child(
-                div()
-                    .id("release-notes-scroll")
-                    .max_h(px(420.0))
-                    .pr_2()
-                    .child(TextView::markdown("release-notes", notes.clone()).selectable(true))
-                    .overflow_y_scrollbar(),
+                v_flex()
+                    .h(px(520.0))
+                    .gap_4()
+                    .on_mouse_down_out(|_, window, cx| window.dispatch_action(Box::new(Cancel), cx))
+                    .child(DialogTitle::new().child(title.clone()))
+                    .child(
+                        div()
+                            .id("release-notes-scroll")
+                            .flex_1()
+                            .min_h_0()
+                            .pr_2()
+                            .overflow_y_scrollbar()
+                            .child(
+                                TextView::markdown("release-notes", notes.clone()).selectable(true),
+                            ),
+                    )
+                    .child(
+                        DialogFooter::new()
+                            .gap_2()
+                            .child(
+                                DialogClose::new().child(
+                                    Button::new("dismiss-update").label("Dismiss").outline(),
+                                ),
+                            )
+                            .child(DialogAction::new().child(
+                                Button::new("open-release").label("Open release").primary(),
+                            )),
+                    ),
             )
     });
 }
