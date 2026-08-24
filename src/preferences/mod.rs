@@ -1,6 +1,5 @@
 pub mod check_updates_on_startup;
 pub mod jpeg_quality;
-#[path = "preferences.rs"]
 mod preference_store;
 pub mod resize_filter;
 pub mod theme;
