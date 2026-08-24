@@ -1,7 +1,6 @@
 use crate::app_dirs::PROJECT_DIRS;
 use crate::preferences::ResizeFilter;
 use crate::steam::{initialize_steam, open_steam_section};
-use atomic_float::AtomicF32;
 use image::codecs::jpeg::JpegEncoder;
 use image::imageops::{FilterType as ImageFilterType, resize};
 use image::{DynamicImage, ImageReader};
@@ -12,7 +11,10 @@ use std::fmt;
 use std::fs::{File, copy, create_dir_all, remove_dir_all};
 use std::io::BufWriter;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex, atomic::Ordering};
+use std::sync::{
+    Arc, Mutex,
+    atomic::{AtomicUsize, Ordering},
+};
 use steamworks::sys::INVALID_SCREENSHOT_HANDLE;
 use steamworks::sys::SteamAPI_ISteamScreenshots_AddScreenshotToLibrary as add_screenshot_to_library;
 use steamworks::sys::SteamAPI_SteamScreenshots_v003 as get_steam_screenshots;
@@ -20,6 +22,7 @@ use steamworks::sys::SteamAPI_SteamScreenshots_v003 as get_steam_screenshots;
 const THUMB_WIDTH: u32 = steamworks::sys::k_ScreenshotThumbWidth as u32;
 const MAX_SIDE: u32 = 16_000;
 const MAX_RESOLUTION: u32 = 26_210_175;
+const PROGRESS_UNITS_PER_SCREENSHOT: usize = 10;
 
 impl From<ResizeFilter> for ImageFilterType {
     fn from(filter_type: ResizeFilter) -> Self {
@@ -85,7 +88,7 @@ impl std::error::Error for ImportError {}
 struct ImportContext {
     cache_dir: PathBuf,
     client: Mutex<steamworks::Client>,
-    screenshots_completed: AtomicF32,
+    progress_units_completed: AtomicUsize,
     total_screenshots: usize,
     report_progress: Arc<dyn Fn(f32) + Send + Sync>,
 }
@@ -124,7 +127,7 @@ pub fn import_screenshots(
     let ctx = Arc::new(ImportContext {
         cache_dir,
         client: Mutex::new(client),
-        screenshots_completed: AtomicF32::new(0.0),
+        progress_units_completed: AtomicUsize::new(0),
         total_screenshots: num_of_files,
         report_progress: Arc::new(report_progress),
     });
@@ -190,11 +193,11 @@ fn import_single_screenshot(
     ctx: &ImportContext,
     options: ImportOptions,
 ) -> Result<(), ImportFailure> {
-    let mut progress_remaining = 1.0;
+    let mut progress_remaining = PROGRESS_UNITS_PER_SCREENSHOT;
     let result =
         process_single_screenshot(file_path, file_index, ctx, options, &mut progress_remaining);
 
-    if result.is_err() && progress_remaining > 0.0 {
+    if result.is_err() && progress_remaining > 0 {
         update_progress(ctx, progress_remaining);
     }
 
@@ -209,7 +212,7 @@ fn process_single_screenshot(
     file_index: usize,
     ctx: &ImportContext,
     options: ImportOptions,
-    progress_remaining: &mut f32,
+    progress_remaining: &mut usize,
 ) -> Result<(), String> {
     let img_name = img_path
         .file_stem()
@@ -259,7 +262,7 @@ fn process_single_screenshot(
             .map_err(|error| format!("Failed to encode {img_name}.{extension}: {error}"))?;
     }
 
-    report_step_progress(ctx, progress_remaining, 0.3);
+    report_step_progress(ctx, progress_remaining, 3);
 
     // Create thumbnail image
     info!(
@@ -281,7 +284,7 @@ fn process_single_screenshot(
         format!("Failed to create thumbnail for {img_name}.{extension}: {error}")
     })?;
 
-    report_step_progress(ctx, progress_remaining, 0.4);
+    report_step_progress(ctx, progress_remaining, 4);
 
     // Import screenshot
     info!(
@@ -325,22 +328,24 @@ fn process_single_screenshot(
     }
     info!("Import of {img_name}.{extension} complete");
 
-    report_step_progress(ctx, progress_remaining, 0.3);
+    report_step_progress(ctx, progress_remaining, 3);
 
     Ok(())
 }
 
-fn report_step_progress(ctx: &ImportContext, progress_remaining: &mut f32, step_progress: f32) {
+fn report_step_progress(ctx: &ImportContext, progress_remaining: &mut usize, step_progress: usize) {
     update_progress(ctx, step_progress);
-    *progress_remaining = (*progress_remaining - step_progress).max(0.0);
+    *progress_remaining = progress_remaining.saturating_sub(step_progress);
 }
 
-fn update_progress(ctx: &ImportContext, step_progress: f32) {
+fn update_progress(ctx: &ImportContext, step_progress: usize) {
     let completed = ctx
-        .screenshots_completed
-        .fetch_add(step_progress, Ordering::SeqCst);
+        .progress_units_completed
+        .fetch_add(step_progress, Ordering::Relaxed);
     #[allow(clippy::cast_precision_loss)]
-    let progress = ((completed + step_progress) / ctx.total_screenshots as f32) * 100.0;
+    let progress = ((completed + step_progress) as f32
+        / (ctx.total_screenshots as f32 * PROGRESS_UNITS_PER_SCREENSHOT as f32))
+        * 100.0;
     (ctx.report_progress)(progress.clamp(0.0, 100.0));
 }
 

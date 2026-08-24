@@ -30,7 +30,6 @@ ureq = "3"
 [dependencies]
 anyhow = "1"
 async-channel = "2.5"
-atomic_float = "1.1"
 bytemuck = { version = "1", features = ["derive"] }
 cosmic-text = "0.19"
 directories = "6.0"
