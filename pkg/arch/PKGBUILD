@@ -43,7 +43,9 @@ package() {
 
     local size
     for size in 16 24 32 48 64 128 256 512; do
+        # A dashed steam-screenshot-importer icon name can fall back to an icon
+        # theme's generic steam icon, so use a unique reverse-domain name.
         install -Dm644 "assets/icons/${size}x${size}.png" \
-            "${pkgdir}/usr/share/icons/hicolor/${size}x${size}/apps/${pkgname}.png"
+            "${pkgdir}/usr/share/icons/hicolor/${size}x${size}/apps/xyz.yobson.${pkgname}.png"
     done
 }

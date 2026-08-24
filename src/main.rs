@@ -54,6 +54,8 @@ use steam_locate::GameArtwork;
 
 const ARTWORK_WIDTH: u32 = 300;
 const ARTWORK_HEIGHT: u32 = 450;
+const APP_ID: &str = "steam-screenshot-importer";
+const APP_NAME: &str = "Steam Screenshot Importer";
 
 struct LoadedGame {
     app_id: u32,
@@ -597,9 +599,16 @@ fn main() {
         .with_level(log::LevelFilter::Info)
         .init();
 
+    let window_icon = Arc::new(
+        image::load_from_memory(include_bytes!("../assets/icons/256x256.png"))
+            .expect("bundled application icon should be a valid image")
+            .into_rgba8(),
+    );
+
     gpui_platform::application()
         .with_assets(assets::Assets::new())
-        .run(|cx: &mut App| {
+        .run(move |cx: &mut App| {
+            cx.set_app_identity(APP_ID, APP_NAME);
             gpui_component::init(cx);
             preferences::init(cx);
             configure_themes(cx);
@@ -608,9 +617,11 @@ fn main() {
                 WindowOptions {
                     window_bounds: Some(WindowBounds::Windowed(bounds)),
                     titlebar: Some(gpui::TitlebarOptions {
-                        title: Some("Steam Screenshot Importer".into()),
+                        title: Some(APP_NAME.into()),
                         ..Default::default()
                     }),
+                    app_id: Some(APP_ID.to_owned()),
+                    icon: Some(window_icon),
                     focus: true,
                     ..Default::default()
                 },
