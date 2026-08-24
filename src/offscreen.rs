@@ -479,7 +479,7 @@ fn read_straight_alpha_pixels(mapped: &[u8], padded_bytes_per_row: u32) -> Resul
     // Resolving the MSAA target averages transparent and covered samples, yielding
     // premultiplied edge pixels. RenderImage expects straight-alpha BGRA, so undo
     // that multiplication before GPUI composites the image a second time.
-    for pixel in pixels.chunks_exact_mut(4) {
+    for pixel in pixels.as_chunks_mut::<4>().0 {
         let alpha = u32::from(pixel[3]);
         if alpha > 0 && alpha < 255 {
             for channel in &mut pixel[..3] {
