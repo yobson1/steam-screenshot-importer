@@ -1,15 +1,9 @@
-/node_modules/
+# Rust build output
+/target/
+WixTools
 
-# Output
-/dist/
-/src-tauri/tools/steamworks-fetcher/target/
-
-# Built packages
-/pkg/arch/**
-!/pkg/arch/PKGBUILD
-
-# Redistributables
-/src-tauri/steam_api/
+# Steamworks redistributables
+/steam_api/
 libsteam_api.so
 steam_api64.dll
 
@@ -22,7 +16,3 @@ Thumbs.db
 .env.*
 !.env.example
 !.env.test
-
-# Vite
-vite.config.js.timestamp-*
-vite.config.ts.timestamp-*

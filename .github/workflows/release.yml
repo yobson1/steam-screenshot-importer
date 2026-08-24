@@ -3,8 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
-  workflow_dispatch:
+      - "v*"
 
 permissions:
   contents: write
@@ -12,10 +11,6 @@ permissions:
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: true
-
-env:
-  NODE_VERSION: '24'
-  PNPM_VERSION: '11.11.0'
 
 jobs:
   build:
@@ -25,12 +20,9 @@ jobs:
           - name: arch
             os: ubuntu-latest
             container: archlinux:base-devel
-          - name: appimage
-            os: ubuntu-latest
-            container: ghcr.io/pkgforge-dev/archlinux:latest
           - name: windows
             os: windows-latest
-            container: ''
+            container: ""
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container }}
     steps:
@@ -43,28 +35,17 @@ jobs:
         with:
           fetch-depth: 0
 
-      # ---------------- Arch build (pacman package + .deb) ----------------
+      # ---------------- Arch build ----------------
 
       - name: Upgrade Arch Linux
         if: matrix.name == 'arch'
         uses: arch4edu/cactus/actions/upgrade-archlinux@main
 
-      - name: Prepare Arch Container for AppImage bundler
-        if: matrix.name == 'appimage'
-        uses: pkgforge-dev/anylinux-setup-action@0964f2258d6c93d1391359978dde081fd8b3c6af # v2
-
       - name: Install Arch build dependencies
-        if: matrix.name != 'windows'
+        if: matrix.name == 'arch'
         run: |
           pacman -Syu --noconfirm --needed \
-            git gnupg zstd cargo pnpm nodejs npm patchelf \
-            cairo desktop-file-utils gdk-pixbuf2 xdg-utils glib2 gtk3 \
-            hicolor-icon-theme libsoup3 pango cef pacman-contrib jaq nss
-
-      - name: Install Linux dependencies
-        if: matrix.name == 'appimage'
-        run: |
-          get-debloated-pkgs --add-common --prefer-nano
+            cargo git gnupg jaq pacman-contrib zstd
 
       - name: Create unprivileged build user
         if: matrix.name == 'arch'
@@ -79,16 +60,23 @@ jobs:
           sudo -u builder gpg --fetch-keys https://github.com/yobson1.gpg
 
       - name: Output stripped version
-        if: matrix.name == 'arch'
         id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+        shell: bash
+        env:
+          REQUESTED_VERSION: ${{ inputs.version }}
+        run: |
+          version="${REQUESTED_VERSION:-${GITHUB_REF_NAME}}"
+          echo "version=${version#v}" >> "$GITHUB_OUTPUT"
 
       - name: Create source tarball
         if: matrix.name == 'arch'
         run: |
           git config --global --add safe.directory "$(pwd)"
           git archive --format=tar.gz --prefix=${{ github.event.repository.name }}-src_${{ steps.version.outputs.version }}/ \
-            -o ${{ github.event.repository.name }}-src_${{ steps.version.outputs.version }}.tar.gz ${{ github.ref }}
+            -o ${{ github.event.repository.name }}-src_${{ steps.version.outputs.version }}.tar.gz \
+            ${{ github.ref }} -- . \
+            ':(exclude).github' \
+            ':(exclude)pkg/arch'
 
       - name: Import GPG key
         if: matrix.name == 'arch'
@@ -105,11 +93,11 @@ jobs:
         if: matrix.name == 'arch'
         run: |
           steamworks_rs_ver="$(
-            jaq --from toml -r '.package[] | select(.name == "steamworks") | .version' src-tauri/Cargo.lock | head -n1
+            jaq --from toml -r '.package[] | select(.name == "steamworks") | .version' Cargo.lock | head -n1
           )"
 
           if [ -z "$steamworks_rs_ver" ]; then
-            echo "steamworks not found in src-tauri/Cargo.lock"
+            echo "steamworks not found in Cargo.lock"
             exit 1
           fi
 
@@ -117,16 +105,16 @@ jobs:
 
           cd pkg/arch
 
-          if [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          if [[ "${{ steps.version.outputs.version }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             sed -i "s/^pkgver=.*/pkgver=${{ steps.version.outputs.version }}/" PKGBUILD
             sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
           else
-            echo "GITHUB_REF_NAME '${GITHUB_REF_NAME}' does not match vX.Y.Z, leaving pkgver/pkgrel unchanged"
+            echo "Version '${{ steps.version.outputs.version }}' does not match X.Y.Z, leaving pkgver/pkgrel unchanged"
           fi
 
           sed -i "s/^_steamworks_rs_ver=.*/_steamworks_rs_ver=${steamworks_rs_ver}/" PKGBUILD
 
-          # The release does not exist yet, so resolve its two future assets from
+          # The release does not exist yet, so resolve its future assets from
           # the workspace while generating checksums and building the package.
           sed -i 's#${url}/releases/download/v${pkgver}#file://'"${GITHUB_WORKSPACE}"'#' PKGBUILD
 
@@ -136,6 +124,20 @@ jobs:
           # Keep the checksums generated from the local files, but publish a
           # PKGBUILD whose sources point at the GitHub release.
           sed -i 's#file://'"${GITHUB_WORKSPACE}"'#${url}/releases/download/v${pkgver}#' PKGBUILD
+
+      - name: Create portable Linux archive
+        if: matrix.name == 'arch'
+        run: |
+          archive_name="${{ github.event.repository.name }}-${{ steps.version.outputs.version }}-linux-x86_64"
+          stage="dist/${archive_name}"
+
+          install -Dm755 \
+            "pkg/arch/src/${{ github.event.repository.name }}-src_${{ steps.version.outputs.version }}/target/release/${{ github.event.repository.name }}" \
+            "${stage}/${{ github.event.repository.name }}"
+          install -Dm755 \
+            pkg/arch/src/libsteam_api.so \
+            "${stage}/libsteam_api.so"
+          tar -C dist -czf "dist/${archive_name}.tar.gz" "${archive_name}"
 
       - name: Upload PKGBUILD artifact
         if: matrix.name == 'arch'
@@ -152,57 +154,21 @@ jobs:
           path: |
             pkg/arch/*.pkg.tar.zst
             !pkg/arch/*-debug-*.pkg.tar.zst
-            pkg/arch/src/${{ github.event.repository.name }}-src_${{ steps.version.outputs.version }}/src-tauri/target/release/bundle/deb/*.deb
             ${{ github.event.repository.name }}-src_${{ steps.version.outputs.version }}.tar.gz
             ${{ github.event.repository.name }}-src_${{ steps.version.outputs.version }}.tar.gz.asc
+            dist/*-linux-x86_64.tar.gz
 
-      # ---------------- Rust/Node toolchain (appimage + windows only) ----------------
+      # ---------------- Windows build ----------------
 
       - name: Setup Rust
-        if: matrix.name != 'arch'
+        if: matrix.name == 'windows'
         uses: dtolnay/rust-toolchain@stable
 
       - name: Rust cache
-        if: matrix.name != 'arch'
+        if: matrix.name == 'windows'
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: src-tauri -> target
-
-      - name: Setup Node
-        if: matrix.name == 'windows'
-        uses: actions/setup-node@v5
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Setup pnpm
-        if: matrix.name == 'windows'
-        uses: pnpm/action-setup@v6
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Install frontend dependencies
-        if: matrix.name != 'arch'
-        run: pnpm install --frozen-lockfile
-
-      - name: Install custom tauri-cli
-        if: matrix.name == 'appimage'
-        run: cargo install tauri-cli --git https://github.com/yobson1/tauri.git --branch feat/cef_appimage-egl
-
-      - name: Build AppImage
-        if: matrix.name == 'appimage'
-        env:
-          LD_LIBRARY_PATH: ${{ github.workspace }}/src-tauri/target/release:${{ env.LD_LIBRARY_PATH }}
-        run: cargo tauri build --ci --bundles appimage --verbose
-
-      - name: Upload AppImage release asset
-        if: matrix.name == 'appimage'
-        uses: actions/upload-artifact@v7
-        with:
-          name: ${{ matrix.name }}
-          path: |
-            src-tauri/target/release/bundle/appimage/*.AppImage
-
-      # ---------------- Windows build (.msi) ----------------
+          workspaces: . -> target
 
       - name: Install Windows build dependencies
         if: matrix.name == 'windows'
@@ -215,28 +181,36 @@ jobs:
         run: |
           vcpkg install dav1d:x64-windows
 
-      - name: Copy runtime DLLs
-        if: matrix.name == 'windows'
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force src-tauri\target\release | Out-Null
-          Copy-Item C:\vcpkg\installed\x64-windows\bin\dav1d.dll src-tauri\target\release\
-          Copy-Item C:\vcpkg\installed\x64-windows\bin\dav1d.dll src-tauri\
-
-      - name: Build Windows installer
+      - name: Build Windows executable
         if: matrix.name == 'windows'
         env:
           PKG_CONFIG_PATH: C:\vcpkg\installed\x64-windows\lib\pkgconfig
-        run: |
-          pnpm tauri build --ci --bundles msi
+        run: cargo build --release --locked
 
-      - name: Upload Windows release asset
+      - name: Create Windows ZIP
+        if: matrix.name == 'windows'
+        shell: pwsh
+        run: |
+          $archiveName = "${{ github.event.repository.name }}-${{ steps.version.outputs.version }}-windows-x86_64"
+          $stage = Join-Path dist $archiveName
+          $steamApi = Get-ChildItem steam_api -Recurse -Filter steam_api64.dll | Select-Object -First 1
+
+          if (-not $steamApi) {
+            throw "steam_api64.dll was not downloaded by build.rs"
+          }
+
+          New-Item -ItemType Directory -Force $stage | Out-Null
+          Copy-Item "target\release\${{ github.event.repository.name }}.exe" $stage
+          Copy-Item $steamApi.FullName $stage
+          Copy-Item "C:\vcpkg\installed\x64-windows\bin\dav1d.dll" $stage
+          Compress-Archive -Path "$stage\*" -DestinationPath "dist\${archiveName}.zip"
+
+      - name: Upload Windows ZIP
         if: matrix.name == 'windows'
         uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.name }}
-          path: |
-            src-tauri/target/release/bundle/msi/*.msi
+          path: dist/*.zip
 
   publish:
     needs: build
@@ -255,27 +229,6 @@ jobs:
         with:
           path: artifacts
 
-      - name: Setup Node
-        uses: actions/setup-node@v5
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Install frontend dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Install Chromium
-        run: pnpm exec playwright install --with-deps chromium
-
-      - name: Generate application screenshots
-        env:
-          VITE_EXAMPLE_VERSION: ${{ github.ref_name }}
-        run: pnpm screenshots
-
       - name: Install typos
         uses: taiki-e/install-action@v2
         with:
@@ -293,7 +246,7 @@ jobs:
         run: |
           mapfile -d '' files < <(
             find artifacts -type f \
-              \( -name '*.pkg.tar.zst' -o -name '*.deb' -o -name '*.AppImage' -o -name '*.msi' -o -name '*.tar.gz' -o -name '*.tar.gz.asc' \) \
+              \( -name '*.pkg.tar.zst' -o -name '*.zip' -o -name '*.tar.gz' -o -name '*.tar.gz.asc' \) \
               -print0 | sort -z
           )
 
@@ -333,8 +286,8 @@ jobs:
       - name: Commit generated release files
         uses: stefanzweifel/git-auto-commit-action@v7
         with:
-          commit_message: 'chore(release): update generated files for ${{ github.ref_name }}'
-          file_pattern: 'pkg/arch/PKGBUILD screenshots/*.png'
+          commit_message: "chore(release): update generated files for ${{ github.ref_name }}"
+          file_pattern: "pkg/arch/PKGBUILD"
           branch: master
 
       - name: Publish to AUR
@@ -345,7 +298,7 @@ jobs:
           commit_username: GitHub Actions
           commit_email: github-actions@github.com
           ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
-          commit_message: '${{ github.ref_name }}'
+          commit_message: "${{ github.ref_name }}"
           updpkgsums: false
 
       - name: Publish release
@@ -357,8 +310,6 @@ jobs:
           body_path: CHANGELOG.md
           files: |
             artifacts/**/*.pkg.tar.zst
-            artifacts/**/*.deb
-            artifacts/**/*.AppImage
-            artifacts/**/*.msi
-            **/*.tar.gz
-            **/*.tar.gz.asc
+            artifacts/**/*.zip
+            artifacts/**/*.tar.gz
+            artifacts/**/*.tar.gz.asc

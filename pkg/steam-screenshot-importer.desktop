@@ -1,0 +1,9 @@
+[Desktop Entry]
+Categories=Utility;
+Comment=Automatic importing of screenshots into Steam using the Steamworks SDK
+Exec=steam-screenshot-importer
+StartupWMClass=steam-screenshot-importer
+Icon=steam-screenshot-importer
+Name=Steam Screenshot Importer
+Terminal=false
+Type=Application

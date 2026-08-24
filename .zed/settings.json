@@ -2,9 +2,6 @@
   "lsp": {
     "rust-analyzer": {
       "initialization_options": {
-        "cargo": {
-          "features": ["cef"]
-        },
         "check": {
           "command": "clippy"
         },
