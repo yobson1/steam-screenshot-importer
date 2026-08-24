@@ -372,8 +372,9 @@ fn decode_artwork(bytes: &[u8]) -> Option<RgbaImage> {
 }
 
 fn placeholder_artwork() -> RgbaImage {
-    decode_artwork(include_bytes!("../assets/defaultappimage.png"))
-        .expect("bundled default game artwork should decode")
+    let image = assets::load("assets/defaultappimage.png")
+        .expect("default app image should be included in application assets");
+    decode_artwork(&image).expect("bundled default game artwork should decode")
 }
 
 fn rgba_to_bgra(pixels: &mut RgbaImage) {
