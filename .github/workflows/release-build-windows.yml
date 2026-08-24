@@ -33,16 +33,12 @@ jobs:
           workspaces: . -> target
 
       - name: Install Windows build dependencies
-        uses: crazy-max/ghaction-chocolatey@v4
-        with:
-          args: install pkgconfiglite
-
-      - name: Install dav1d
         shell: pwsh
-        run: vcpkg install dav1d:x64-windows
+        run: vcpkg install pkgconf:x64-windows dav1d:x64-windows
 
       - name: Build Windows executable
         env:
+          PKG_CONFIG: C:\vcpkg\installed\x64-windows\tools\pkgconf\pkgconf.exe
           PKG_CONFIG_PATH: C:\vcpkg\installed\x64-windows\lib\pkgconfig
         run: cargo build --release --locked
 
