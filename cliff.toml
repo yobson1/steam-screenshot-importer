@@ -60,16 +60,19 @@ body = """
     ## Installation
 
     ### Windows
-    - Download & run `{{ remote.github.repo | replace(from="-", to=" ") | title }}_{{ version | trim_start_matches(pat="v") }}_x64_en-US.msi`
+    - Download `{{ remote.github.repo }}-{{ version | trim_start_matches(pat="v") }}-windows-x86_64.zip`
+    - Extract the ZIP, keeping the executable and DLL files together
+    - Run `{{ remote.github.repo }}.exe`
 
     ### Arch Based Linux Distros
     - Download `{{ remote.github.repo }}-{{ version | trim_start_matches(pat="v") }}-1-x86_64.pkg.tar.zst`
     - Install with: `pacman -U {{ remote.github.repo }}-{{ version | trim_start_matches(pat="v") }}-1-x86_64.pkg.tar.zst`
 
     ### Other Linux Distros
-    - Download `{{ remote.github.repo }}_{{ version | trim_start_matches(pat="v") }}_amd64.AppImage`
-    - Ensure it has execute permissions: `chmod +x {{ remote.github.repo }}_{{ version | trim_start_matches(pat="v") }}_amd64.AppImage`
-    - Run the application: `./{{ remote.github.repo }}_{{ version | trim_start_matches(pat="v") }}_amd64.AppImage`
+    - Download `{{ remote.github.repo }}-{{ version | trim_start_matches(pat="v") }}-linux-x86_64.tar.gz`
+    - Extract it: `tar -xzf {{ remote.github.repo }}-{{ version | trim_start_matches(pat="v") }}-linux-x86_64.tar.gz`
+    - Run the application: `./{{ remote.github.repo }}-{{ version | trim_start_matches(pat="v") }}-linux-x86_64/{{ remote.github.repo }}`
+
 {% endif %}
 
 
