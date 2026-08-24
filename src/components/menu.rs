@@ -14,6 +14,7 @@ use gpui_component::{
 };
 
 pub const MENU_WIDTH: f32 = 136.0;
+const MENU_ANIMATION_DURATION: Duration = Duration::from_millis(525);
 
 fn parse_app_id(value: &str) -> Option<u32> {
     value.trim().parse().ok()
@@ -149,6 +150,8 @@ impl RenderOnce for NavButton {
 
 pub struct Menu {
     open: bool,
+    closing: bool,
+    transition_epoch: u64,
     hovered_item: Option<NavItem>,
     app_id_input: gpui::Entity<InputState>,
 }
@@ -162,23 +165,48 @@ impl Menu {
         });
         Self {
             open: false,
+            closing: false,
+            transition_epoch: 0,
             hovered_item: None,
             app_id_input,
         }
     }
 
     fn toggle(&mut self, cx: &mut Context<Self>) {
-        self.open = !self.open;
-        if !self.open {
-            self.hovered_item = None;
+        if self.open {
+            self.close(cx);
+        } else {
+            self.transition_epoch = self.transition_epoch.wrapping_add(1);
+            self.open = true;
+            self.closing = false;
+            cx.notify();
         }
-        cx.notify();
     }
 
     fn close(&mut self, cx: &mut Context<Self>) {
+        if !self.open || self.closing {
+            return;
+        }
+
         self.open = false;
+        self.closing = true;
+        self.transition_epoch = self.transition_epoch.wrapping_add(1);
+        let transition_epoch = self.transition_epoch;
         self.hovered_item = None;
         cx.notify();
+
+        cx.spawn(async move |this, cx| {
+            cx.background_executor()
+                .timer(MENU_ANIMATION_DURATION)
+                .await;
+            let _ = this.update(cx, |this, cx| {
+                if this.closing && this.transition_epoch == transition_epoch {
+                    this.closing = false;
+                    cx.notify();
+                }
+            });
+        })
+        .detach();
     }
 
     fn navigate(&mut self, item: NavItem, cx: &mut Context<Self>) {
@@ -198,6 +226,7 @@ impl Menu {
     }
 
     fn render_drawer(&self, viewport: Size<Pixels>, cx: &mut Context<Self>) -> impl IntoElement {
+        let closing = self.closing;
         let home = self
             .render_nav_button(NavItem::Home, cx)
             .on_click(cx.listener(|this, _, _, cx| this.navigate(NavItem::Home, cx)));
@@ -264,6 +293,7 @@ impl Menu {
                     .overflow_y_scroll()
                     .bg(cx.theme().sidebar)
                     .shadow_2xl()
+                    .occlude()
                     .children([
                         home.into_any_element(),
                         app_id.into_any_element(),
@@ -271,9 +301,16 @@ impl Menu {
                         options.into_any_element(),
                     ])
                     .with_animation(
-                        "navigation-menu-slide-in",
-                        Animation::new(Duration::from_millis(525)).with_easing(ease_in_out),
-                        |drawer, delta| drawer.left(px(-MENU_WIDTH * (1.0 - delta))),
+                        if closing {
+                            "navigation-menu-slide-out"
+                        } else {
+                            "navigation-menu-slide-in"
+                        },
+                        Animation::new(MENU_ANIMATION_DURATION).with_easing(ease_in_out),
+                        move |drawer, delta| {
+                            let hidden_fraction = if closing { delta } else { 1.0 - delta };
+                            drawer.left(px(-MENU_WIDTH * hidden_fraction))
+                        },
                     ),
             )
     }
@@ -304,7 +341,7 @@ impl Render for Menu {
             .absolute()
             .top_0()
             .left_0()
-            .when(self.open, |menu| {
+            .when(self.open || self.closing, |menu| {
                 menu.child(self.render_drawer(viewport, cx))
             })
             .child(self.render_toggle(cx))
