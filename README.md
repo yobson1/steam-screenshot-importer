@@ -86,8 +86,6 @@ Currently only distributing/testing for Win64 and Arch based Linux distros
 
 ![Screenshot](screenshots/about.png)
 
-![Screenshot](screenshots/import_dialogue.png)
-
 ![Screenshot](screenshots/steam_import.png)
 
 ## Light theme
